@@ -1,10 +1,16 @@
 M = math
 MAX = M.max
 MIN = M.min
+COS = M.cos
+SIN = M.sin
+
+M2S = map.mapToScreen
+S2M = map.screenToMap
 
 S = screen
 DM = S.drawMap
 DRF = S.drawRectF
+DTAF = S.drawTriangleF
 DT = S.drawText
 DL = S.drawLine
 
@@ -91,6 +97,7 @@ FM = true                             -- auto follow mode, mapPos will follow ve
 TOUCH_FLAG = false
 UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
+SIC = H2RGB(PT("Self Icon Color"))
 SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
 DW, DH = PN("Display Width"), PN("Display Height")
 ZOOM_F = PN("Zoom Sensitivity")
@@ -152,7 +159,7 @@ function onTick()
             -- map touch
             if not TOUCH_FLAG then
                 FM = false
-                MTX, MTY = map.screenToMap(MX, MY, calZoom(MZ), SCR_W, SCR_H, tx, ty)
+                MTX, MTY = S2M(MX, MY, calZoom(MZ), SCR_W, SCR_H, tx, ty)
                 RESET_BTN.v = true
             end
         end
@@ -185,9 +192,23 @@ function onTick()
     ON(3, calZoom(MZ))
 end
 
+function rotate(x, y, r)
+    return -x * COS(r) - y * SIN(r), y * COS(r) - x * SIN(r)
+end
+
 function onDraw()
-    DM(MX, MY, calZoom(MZ))
+    local zoom = calZoom(MZ)
+    -- drawMap
+    DM(MX, MY, zoom)
+    -- drawControl Buttons
     for _, btn in ipairs(BTNS) do
         btn:draw()
     end
+    -- drawSelf Icon
+    SC(SIC)
+    local sx, sy = M2S(MX, MY, zoom, SCR_W, SCR_H, X, Y)
+    local x1, y1 = rotate(0, -5, YAW)
+    local x2, y2 = rotate(4, 3, YAW)
+    local x3, y3 = rotate(-4, 3, YAW)
+    DTAF(sx + x1, sy + y1, sx + x2, sy + y2, sx + x3, sy + y3)
 end
