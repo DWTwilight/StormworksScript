@@ -7,6 +7,7 @@ SC = SCR.setColor
 
 IN = input.getNumber
 PN = property.getNumber
+IB = input.getBool
 
 m = math
 pi = m.pi
@@ -17,6 +18,17 @@ rad = m.rad
 deg = m.deg
 abs = m.abs
 at = m.atan
+
+function AA(a, b)
+    DC(a + 1, b + 1, 1)
+    DL(a, b + 1, a, b + 5)
+    DL(a + 2, b + 1, a + 2, b + 5)
+end
+
+function PP(a, b)
+    DC(a + 1, b + 1, 1)
+    DL(a, b, a, b + 5)
+end
 
 function D0(a, b)
     DR(a, b, 2, 4)
@@ -84,7 +96,11 @@ function dash(a, b)
 end
 
 function CST(a, b, s)
-    if s == "0" then
+    if s == "A" then
+        AA(a, b)
+    elseif s == "P" then
+        PP(a, b)
+    elseif s == "0" then
         D0(a, b)
     elseif s == "1" then
         D1(a, b)
@@ -145,6 +161,7 @@ function onTick()
     altitude = IN(5)
     throttle = IN(6)
     vSpeed = IN(7) * 60
+    AP = IB(1)
 end
 
 function getPixOffset(ang)
@@ -278,4 +295,7 @@ function onDraw()
     SC(C.r, C.g, C.b, T)
     drawSpeed()
     drawAltitude()
+    if AP then
+        DST(16, SCR_H - 5, "AP")
+    end
 end
