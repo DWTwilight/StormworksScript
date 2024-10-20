@@ -143,6 +143,7 @@ HUDD = HUDW / 2 / sin(FOV / 2)
 function onTick()
     roll, pitch, yaw = IN(1), IN(2), IN(3)
     hAng = (deg(yaw) + 360) % 360
+    DTG = IN(4)
 end
 
 function rotate(x, y, r)
@@ -282,4 +283,8 @@ function onDraw()
     SC(C.r, C.g, C.b, T)
     drawHorizon()
     drawHeading()
+    if DTG < 500 then
+        local s = string.format("%.0f", DTG)
+        DST(SCR_W - 15 - #s * 4, SCR_H - 5, s)
+    end
 end
