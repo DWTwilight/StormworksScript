@@ -82,7 +82,7 @@ function onTick()
     local lax, lay, laz = G2L({ IN(10), IN(11), IN(12) }, B)
 
     local pitch = IN(15) * pi2
-    local yaw = at(b[2][1], b[2][2])
+    local yaw = -IN(17) * pi2
     local x, y, z = L2G({ 0, 1, 0 }, b)
     local ux, uy, uz = -sin(pitch) * sin(yaw), cos(pitch), -sin(pitch) * cos(yaw)
     local roll = calculateAngle({
@@ -100,14 +100,14 @@ function onTick()
     end
 
     -- cal distance to ground
-    local dtgSensor, dtg = IN(19), 500
+    local dtgSensor, dtg = IN(21), 500
     if dtgSensor < 500 then
         x, y, z = L2G({ 0, -dtgSensor, 0 }, b)
         dtg = -y
     end
 
     -- cal windSpeed
-    local windSpeed, windDirection = IN(20), IN(21) * pi2
+    local windSpeed, windDirection = IN(22), IN(23) * pi2
     local windSpeedX, windSpeedZ =
         windSpeed * cos(windDirection),
         windSpeed * sin(windDirection)
@@ -129,11 +129,11 @@ function onTick()
     ON(15, pitch)
     ON(16, roll)
     ON(17, yaw)
-    ON(18, IN(16))
-    ON(19, IN(17))
-    ON(20, IN(18))
+    ON(18, IN(18))
+    ON(19, IN(19))
+    ON(20, IN(20))
     ON(21, dtg)
     ON(22, windSpeedX)
     ON(23, windSpeedZ)
-    ON(24, IN(22))
+    ON(24, IN(24))
 end

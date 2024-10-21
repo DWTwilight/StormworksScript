@@ -58,6 +58,10 @@ function convertWithRoll(pitchSpeed, yawSpeed, roll)
     return m.cos(roll) * pitchSpeed + m.sin(roll) * yawSpeed, -m.sin(roll) * pitchSpeed + m.cos(roll) * yawSpeed
 end
 
+function isNaN(v)
+    return type(v) == "number" and v ~= v
+end
+
 function onTick()
     -- controls
     local rollMInput, pitchMInput, yawMInput = IN(1), IN(2), IN(3)
@@ -84,102 +88,109 @@ function onTick()
         AP_FLAG = false
     else
         local rollPid, pitchPid, yawPid = IN(4), IN(5), IN(6)
-        local speed, altitude = IN(7), IN(8)
-        local factor = m.max(ALTITUDE_FACTOR, m.sqrt(altitude)) / ALTITUDE_FACTOR *
-            (SPEED_SQRT_FACTOR / m.max(m.abs(speed) ^ 0.5, SPEED_SQRT_FACTOR))
-        if ap and not manualControl then
-            if not AP_FLAG then
-                -- reset AP controls
-                apPitch = pitchTrim
-                apRoll = rollTrim
-                apYaw = yawTrim
-                apThrottle = throttle
-                AP_FLAG = true
-            end
-            -- auto pilot on and not manual control
-            local roll, pitch, yaw = IN(9), IN(10), IN(11)
-            local altTarget, speedTarget, yawTarget = IN(12), IN(13) / 3.6, IN(14) / 180 * m.pi
-            local curRollAS, curPitchAs, curYawAs = IN(15), IN(16), IN(17)
-            if yawTarget > m.pi then
-                yawTarget = yawTarget - 2 * m.pi
-            end
-
-            -- cal row target
-            local yawDiff = calRadDiff(yawTarget, yaw)
-            local rollTarget = clamp(AP_MAX_ROLL * (yawDiff / AP_YAW_FACTOR), -AP_MAX_ROLL, AP_MAX_ROLL)
-
-            -- cal pitch target
-            local pitchTarget = clamp(AP_MAX_PITCH * ((altTarget - altitude) / AP_PITCH_FACTOR), -AP_MAX_PITCH,
-                AP_MAX_PITCH)
-
-            -- cal roll, pitch, yaw speed
-            local rollSpeed = clamp(AP_MAX_ROLL_SPEED * (calRadDiff(rollTarget, roll) / m.pi * 5),
-                -AP_MAX_ROLL_SPEED, AP_MAX_ROLL_SPEED)
-            local pitchSpeed = clamp(AP_MAX_PITCH_SPEED * (calRadDiff(pitchTarget, pitch) / m.pi * 5),
-                -AP_MAX_PITCH_SPEED, AP_MAX_PITCH_SPEED)
-            local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 3),
-                -AP_MAX_YAW_SPEED, AP_MAX_YAW_SPEED)
-
-            pitchSpeed, yawSpeed = convertWithRoll(pitchSpeed, yawSpeed, roll)
-
-            -- whether activate trim pid
-            OB(1, true)
-            OB(2, true)
-            OB(3, true)
-            -- pid targets
-            ON(6, pitchSpeed)
-            ON(7, rollSpeed)
-            ON(8, yawSpeed)
-
-            -- trim when possible
-            if abs(curPitchAs) < TRIM_ZONE then
-                pitchTrim = apPitch
-            end
-            if abs(curRollAS) < TRIM_ZONE then
-                rollTrim = apRoll
-            end
-            if abs(curYawAs) < TRIM_ZONE then
-                yawTrim = apYaw
-            end
-
-            -- controls
-            apPitch = clamp(apPitch + pitchPid * factor, -1, 1)
-            apRoll = clamp(apRoll + rollPid * factor, -1, 1)
-            apYaw = clamp(apYaw + yawPid * factor, -1, 1)
-
-            setOutputs(apRoll, apPitch, apYaw)
-
-            -- auto throttle
-            apThrottle = clamp(apThrottle +
-                clamp((speedTarget - speed) / AP_THROTTLE_FACTOR,
-                    -AP_THROTTLE_SENSITIVITY, AP_THROTTLE_SENSITIVITY),
-                0, 1)
-            -- throttle
-            ON(9, apThrottle)
-            OB(5, apThrottle - throttle > AP_THROTTLE_PRECISION)
-            OB(6, throttle - apThrottle > AP_THROTTLE_PRECISION)
+        if isNaN(rollPid) or isNaN(pitchPid) or isNaN(yawPid) then
+            -- restart pid
+            OB(1, false)
+            OB(2, false)
+            OB(3, false)
         else
-            -- manual control
-            -- apply trim
-            pitchTrim = clamp(pitchTrim + pitchPid * factor, -0.75, 0.75)
-            rollTrim = clamp(rollTrim + rollPid * factor, -0.1, 0.1)
-            yawTrim = clamp(yawTrim + yawPid * factor, -0.1, 0.1)
+            local speed, altitude = IN(7), IN(8)
+            local factor = m.max(ALTITUDE_FACTOR, m.sqrt(altitude)) / ALTITUDE_FACTOR *
+                (SPEED_SQRT_FACTOR / m.max(m.abs(speed) ^ 0.5, SPEED_SQRT_FACTOR))
+            if ap and not manualControl then
+                if not AP_FLAG then
+                    -- reset AP controls
+                    apPitch = pitchTrim
+                    apRoll = rollTrim
+                    apYaw = yawTrim
+                    apThrottle = throttle
+                    AP_FLAG = true
+                end
+                -- auto pilot on and not manual control
+                local roll, pitch, yaw = IN(9), IN(10), IN(11)
+                local altTarget, speedTarget, yawTarget = IN(12), IN(13) / 3.6, IN(14) / 180 * m.pi
+                local curRollAS, curPitchAs, curYawAs = IN(15), IN(16), IN(17)
+                if yawTarget > m.pi then
+                    yawTarget = yawTarget - 2 * m.pi
+                end
 
-            -- whether activate trim pid
-            OB(1, abs(rollMInput) < TRIM_ZONE)
-            OB(2, abs(pitchMInput) < TRIM_ZONE)
-            OB(3, abs(yawMInput) < TRIM_ZONE)
-            -- pid targets
-            ON(6, 0)
-            ON(7, 0)
-            ON(8, 0)
-            -- throttle
-            ON(9, throttle)
-            OB(5, IB(3))
-            OB(6, IB(4))
+                -- cal row target
+                local yawDiff = calRadDiff(yawTarget, yaw)
+                local rollTarget = clamp(AP_MAX_ROLL * (yawDiff / AP_YAW_FACTOR), -AP_MAX_ROLL, AP_MAX_ROLL)
 
-            setOutputs(trim(rollMInput, rollTrim), trim(pitchMInput, pitchTrim), trim(yawMInput, yawTrim))
-            AP_FLAG = false
+                -- cal pitch target
+                local pitchTarget = clamp(AP_MAX_PITCH * ((altTarget - altitude) / AP_PITCH_FACTOR), -AP_MAX_PITCH,
+                    AP_MAX_PITCH)
+
+                -- cal roll, pitch, yaw speed
+                local rollSpeed = clamp(AP_MAX_ROLL_SPEED * (calRadDiff(rollTarget, roll) / m.pi * 5),
+                    -AP_MAX_ROLL_SPEED, AP_MAX_ROLL_SPEED)
+                local pitchSpeed = clamp(AP_MAX_PITCH_SPEED * (calRadDiff(pitchTarget, pitch) / m.pi * 5),
+                    -AP_MAX_PITCH_SPEED, AP_MAX_PITCH_SPEED)
+                local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 3),
+                    -AP_MAX_YAW_SPEED, AP_MAX_YAW_SPEED)
+
+                pitchSpeed, yawSpeed = convertWithRoll(pitchSpeed, yawSpeed, roll)
+
+                -- whether activate trim pid
+                OB(1, true)
+                OB(2, true)
+                OB(3, true)
+                -- pid targets
+                ON(6, pitchSpeed)
+                ON(7, rollSpeed)
+                ON(8, yawSpeed)
+
+                -- trim when possible
+                if abs(curPitchAs) < TRIM_ZONE then
+                    pitchTrim = apPitch
+                end
+                if abs(curRollAS) < TRIM_ZONE then
+                    rollTrim = apRoll
+                end
+                if abs(curYawAs) < TRIM_ZONE then
+                    yawTrim = apYaw
+                end
+
+                -- controls
+                apPitch = clamp(apPitch + pitchPid * factor, -1, 1)
+                apRoll = clamp(apRoll + rollPid * factor, -1, 1)
+                apYaw = clamp(apYaw + yawPid * factor, -1, 1)
+
+                setOutputs(apRoll, apPitch, apYaw)
+
+                -- auto throttle
+                apThrottle = clamp(apThrottle +
+                    clamp((speedTarget - speed) / AP_THROTTLE_FACTOR,
+                        -AP_THROTTLE_SENSITIVITY, AP_THROTTLE_SENSITIVITY),
+                    0, 1)
+                -- throttle
+                ON(9, apThrottle)
+                OB(5, apThrottle - throttle > AP_THROTTLE_PRECISION)
+                OB(6, throttle - apThrottle > AP_THROTTLE_PRECISION)
+            else
+                -- manual control
+                -- apply trim
+                pitchTrim = clamp(pitchTrim + pitchPid * factor, -0.75, 0.75)
+                rollTrim = clamp(rollTrim + rollPid * factor, -0.1, 0.1)
+                yawTrim = clamp(yawTrim + yawPid * factor, -0.1, 0.1)
+
+                -- whether activate trim pid
+                OB(1, abs(rollMInput) < TRIM_ZONE)
+                OB(2, abs(pitchMInput) < TRIM_ZONE)
+                OB(3, abs(yawMInput) < TRIM_ZONE)
+                -- pid targets
+                ON(6, 0)
+                ON(7, 0)
+                ON(8, 0)
+                -- throttle
+                ON(9, throttle)
+                OB(5, IB(3))
+                OB(6, IB(4))
+
+                setOutputs(trim(rollMInput, rollTrim), trim(pitchMInput, pitchTrim), trim(yawMInput, yawTrim))
+                AP_FLAG = false
+            end
         end
     end
     OB(4, AP_FLAG)
