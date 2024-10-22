@@ -5,10 +5,8 @@ COS = M.cos
 SIN = M.sin
 
 M2S = map.mapToScreen
-S2M = map.screenToMap
 
 S = screen
-DM = S.drawMap
 DRF = S.drawRectF
 DTAF = S.drawTriangleF
 DT = S.drawText
@@ -17,6 +15,7 @@ DL = S.drawLine
 IN = input.getNumber
 IB = input.getBool
 ON = output.setNumber
+OB = output.setBool
 
 P = property
 PN = P.getNumber
@@ -90,13 +89,13 @@ function PushButton(x, y, w, h, text, color, pressColor, visible, tox, toy, df)
     }
 end
 
-X, Y, YAW = 0, 0, 0                   -- posX, posY, yaw
-MX, MY, MZ = 0, 0, PN("Initial Zoom") -- mapPosX, mapPosY, mapZoom
-MTX, MTY = 0, 0                       --mapTargetPosX, mapTargetPosY
-FM = true                             -- auto follow mode, mapPos will follow vehicle pos
+X, Y, YAW = 0, 0, 0                            -- posX, posY, yaw
+MX, MY, MZ, ZOOM = 0, 0, PN("Initial Zoom"), 0 -- mapPosX, mapPosY, mapZoom, zoom value
+MTX, MTY = 0, 0                                --mapTargetPosX, mapTargetPosY
+FM = true                                      -- auto follow mode, mapPos will follow vehicle pos
 TOUCH_FLAG = false
-UC = H2RGB(PT("UI Primary Color"))
-UC2 = H2RGB(PT("UI Secondary Color"))
+UC = H2RGB(PT("Basic Primary Color"))
+UC2 = H2RGB(PT("Basic Secondary Color"))
 SIC = H2RGB(PT("Self Icon Color"))
 SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
 DW, DH = PN("Display Width"), PN("Display Height")
@@ -145,36 +144,61 @@ function onTick()
             btn:press(tx, ty)
         end
 
-        -- zoom buttons
+        local pressFlag = true
+
         if ZOOM_IN_BTN.pressed then
+            -- zoom in btn
             MZ = clamp(MZ + ZOOM_F, 0, 1)
         elseif ZOOM_OUT_BTN.pressed then
+            -- zoom out btn
             MZ = clamp(MZ - ZOOM_F, 0, 1)
-        elseif RESET_BTN.pressed then
-            if RESET_BTN.onPress then
-                FM = true
-                RESET_BTN.v = false
-            end
+        elseif RESET_BTN.pressed and RESET_BTN.onPress then
+            FM = true
+            RESET_BTN.v = false
         else
-            -- map touch
-            if not TOUCH_FLAG then
-                FM = false
-                MTX, MTY = S2M(MX, MY, calZoom(MZ), SCR_W, SCR_H, tx, ty)
-                RESET_BTN.v = true
-            end
+            pressFlag = false
         end
+
+        -- output touch data
+        if pressFlag then
+            -- touch intercepted
+            OB(1, false) -- touch
+            OB(2, false) -- onTouch
+            ON(1, 0)     -- tx
+            ON(2, 0)     -- ty
+        else
+            -- touch will forward to next script
+            OB(1, true)           -- touch
+            OB(2, not TOUCH_FLAG) -- onTouch
+            ON(1, tx)             -- tx
+            ON(2, ty)             -- ty
+        end
+
         TOUCH_FLAG = true
     else
         TOUCH_FLAG = false
         for _, btn in ipairs(BTNS) do
             btn:clearPress()
         end
+
+        -- output touch data
+        OB(1, false) -- touch
+        OB(2, false) -- onTouch
+        ON(1, 0)     -- tx
+        ON(2, 0)     -- ty
     end
 
-    --handle keyboard coord
+    -- handle keyboard coord
     if IB(2) then
         FM = false
         MTX, MTY = IN(6), IN(7)
+        RESET_BTN.v = true
+    end
+
+    -- handle map touch
+    if IB(3) then
+        FM = false
+        MTX, MTY = IN(8), IN(9)
         RESET_BTN.v = true
     end
 
@@ -187,9 +211,10 @@ function onTick()
 
     MX = lerp(MTX, MX, SMOOTH_F)
     MY = lerp(MTY, MY, SMOOTH_F)
-    ON(1, MX)
-    ON(2, MY)
-    ON(3, calZoom(MZ))
+    ZOOM = calZoom(MZ)
+    ON(3, MX)
+    ON(4, MY)
+    ON(5, ZOOM)
 end
 
 function rotate(x, y, r)
@@ -197,18 +222,15 @@ function rotate(x, y, r)
 end
 
 function onDraw()
-    local zoom = calZoom(MZ)
-    -- drawMap
-    DM(MX, MY, zoom)
     -- drawControl Buttons
     for _, btn in ipairs(BTNS) do
         btn:draw()
     end
     -- drawSelf Icon
     SC(SIC)
-    local sx, sy = M2S(MX, MY, zoom, SCR_W, SCR_H, X, Y)
+    local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, X, Y)
     local x1, y1 = rotate(0, -5, YAW)
-    local x2, y2 = rotate(4, 3, YAW)
-    local x3, y3 = rotate(-4, 3, YAW)
+    local x2, y2 = rotate(3, 3, YAW)
+    local x3, y3 = rotate(-3, 3, YAW)
     DTAF(sx + x1, sy + y1, sx + x2, sy + y2, sx + x3, sy + y3)
 end
