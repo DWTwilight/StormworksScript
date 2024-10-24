@@ -1,24 +1,30 @@
 -- g_savedata table that persists between game sessions
-g_savedata = {}
+g_savedata = {
+    GROUP_IDS = {}
+}
 
 TARGET_DIAL_NAME = "[CR] targetId"
 EXCLUDE_TAGS = { "trade", "resource", "storage" }
 DETACH_DISTANCE = 25 -- sub vehicle to main vehicle
 
-function vehicle(id, groupId, targetId)
+-- vehicle groups
+VEHICLE_GROUPS = {}
+VG_MAPPING = {}
+
+function vehicle(id, groupId)
     return {
         id = id,
         groupId = groupId,
         matrix = nil,
         hasRadar = false,
-        targetId = targetId,
+        targetId = nil,
         detached = false,
         update = function(v)
             local m, _ = server.getVehiclePos(v.id)
             v.matrix = m
             if v.hasRadar then
                 -- try to update target info
-                DATA, _ = server.getVehicleDial(vehicle_id, TARGET_DIAL_NAME)
+                DATA, _ = server.getVehicleDial(v.id, TARGET_DIAL_NAME)
                 if DATA ~= nil then
                     v.targetId = DATA["value"]
                 end
@@ -47,17 +53,15 @@ function vehicleGroup(id)
                 for vehicle_id, v in pairs(group.vehicles) do
                     if vehicle_id ~= group.main_vid then
                         v:update()
-                        v.detached = matrix.distance(mainV.matrix, v.matrix) >= DETACH_DISTANCE
+                        if not v.detached and mainV.matrix ~= nil and v.matrix ~= nil then
+                            v.detached = matrix.distance(mainV.matrix, v.matrix) >= DETACH_DISTANCE
+                        end
                     end
                 end
             end
         end
     }
 end
-
--- vehicle groups
-VEHICLE_GROUPS = {}
-VG_MAPPING = {}
 
 function getVehicleInfo(vehicle_id, group_id)
     VEHICLE_DATA, is_success = server.getVehicleData(vehicle_id)
@@ -71,7 +75,7 @@ function getVehicleInfo(vehicle_id, group_id)
             end
         end
         if flag then
-            return vehicle(group_id, nil, fullTag)
+            return vehicle(vehicle_id, group_id)
         end
     end
     return nil
@@ -104,6 +108,8 @@ function onGroupSpawn(group_id, peer_id, x, y, z, group_cost)
             for vid, v in pairs(group.vehicles) do
                 VG_MAPPING[vid] = group_id
             end
+            -- add g_savedata
+            g_savedata.GROUP_IDS[group_id] = true
         end
     end
 end
@@ -125,8 +131,10 @@ function onVehicleDespawn(vehicle_id, peer_id)
             if next(group.vehicles) == nil then
                 -- rm group
                 VEHICLE_GROUPS[group_id] = nil
+                -- rm g_savedata
+                g_savedata.GROUP_IDS[group_id] = nil
             end
-            -- remove from VG_mapping
+            -- remove from VG_MAPPING
             VG_MAPPING[vehicle_id] = nil
         end
     end
@@ -145,6 +153,13 @@ function onVehicleLoad(vehicle_id)
     end
 end
 
+function onCreate(is_world_create)
+    -- restore data
+    for group_id, _ in pairs(g_savedata.GROUP_IDS) do
+        onGroupSpawn(group_id)
+    end
+end
+
 -- Tick function that will be executed every logic tick
 function onTick(game_ticks)
     -- update each group
@@ -160,16 +175,16 @@ function onCustomCommand(full_message, user_peer_id, is_admin, is_auth, command,
             for group_id, group in pairs(VEHICLE_GROUPS) do
                 server.announce("[Custom Radar]", string.format("group_id: %d, main_vid: %d", group_id, group.main_vid))
                 for vehicle_id, v in pairs(group.vehicles) do
+                    local x, y, z = matrix.position(v.matrix)
                     server.announce("[Custom Radar]",
-                        string.format("    id: %d, hasRadar: %s, targetId: %d, detached: %s",
+                        string.format("    id: %d, hasRadar: %s, targetId: %d, detached: %s, pos: {%f, %f, %f}",
                             vehicle_id,
                             tostring(v.hasRadar),
                             v.hasRadar and v.targetId or -999,
-                            tostring(v.detached)))
+                            tostring(v.detached),
+                            x, y, z))
                 end
             end
-        elseif one == "update" then
-            onTick()
         end
     end
 end
