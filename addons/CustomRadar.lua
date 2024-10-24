@@ -110,6 +110,7 @@ function onGroupSpawn(group_id, peer_id, x, y, z, group_cost)
             end
             -- add g_savedata
             g_savedata.GROUP_IDS[group_id] = true
+            server.announce("[Custom Radar]", string.format("group: %d added", group_id))
         end
     end
 end
@@ -158,6 +159,7 @@ function onCreate(is_world_create)
     for group_id, _ in pairs(g_savedata.GROUP_IDS) do
         onGroupSpawn(group_id)
     end
+    server.announce("[Custom Radar]", "data resotred")
 end
 
 -- Tick function that will be executed every logic tick
