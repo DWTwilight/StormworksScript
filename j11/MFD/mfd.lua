@@ -12,6 +12,7 @@ DC = S.drawCircle
 IN = input.getNumber
 IB = input.getBool
 ON = output.setNumber
+OB = output.setBool
 
 P = property
 PT = P.getText
@@ -176,12 +177,14 @@ TABS = {
 
 function onTick()
     if IB(1) then
+        local tx, ty = IN(3), IN(4)
+        local pressFlag = false
         if not TOUCH_FLAG then
-            local tx, ty = IN(3), IN(4)
             -- handle touch
             for i, btn in ipairs(TABS) do
                 if btn:toggle(tx, ty) then
                     SELECT_INDEX = i
+                    pressFlag = true
                 end
             end
             -- clear other tabs
@@ -189,11 +192,31 @@ function onTick()
                 btn.toggled = i == SELECT_INDEX
             end
         end
+
+        if pressFlag then
+            -- touch intercepted
+            OB(1, false) -- touch
+            OB(2, false) -- onTouch
+            ON(1, 0)     -- tx
+            ON(2, 0)     -- ty
+        else
+            -- touch will forward to next script
+            OB(1, true)           -- touch
+            OB(2, not TOUCH_FLAG) -- onTouch
+            ON(1, tx)             -- tx
+            ON(2, ty)             -- ty
+        end
+
         TOUCH_FLAG = true
     else
+        -- output touch data
+        OB(1, false) -- touch
+        OB(2, false) -- onTouch
+        ON(1, 0)     -- tx
+        ON(2, 0)     -- ty
         TOUCH_FLAG = false
     end
-    ON(1, SELECT_INDEX)
+    ON(3, SELECT_INDEX)
 end
 
 function onDraw()

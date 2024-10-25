@@ -290,14 +290,14 @@ function onTick()
     end
 
     -- AP enabled:
-    if IB(2) then
+    if IB(3) then
         APA = clamp(IN(4), 50, 19000) // 1
         APS = clamp(IN(5) * 3.6, 500, 1500) // 1
         APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
     end
 
     -- Fly to waypoint
-    FTWP = IB(3)
+    FTWP = IB(4)
 
     ON(1, APA or 0)
     ON(2, APS or 0)

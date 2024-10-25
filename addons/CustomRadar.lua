@@ -177,6 +177,8 @@ function onVehicleLoad(vehicle_id)
             v.hasRadar = true
             v.targetId = DATA["value"]
         end
+        -- set id
+        server.setVehicleKeypad(vehicle_id, SELF_ID_PAD_NAME, vehicle_id)
     end
 end
 
@@ -224,6 +226,10 @@ function onTick(game_ticks)
                 end
             end
         end
+        -- sort by vids
+        table.sort(TARGET_LIST, function(left, right)
+            return left.id < right.id
+        end)
         -- update interval
         REFRESH_INTERVAL = (#TARGET_LIST // 6) + 1
     end
@@ -234,8 +240,6 @@ function onTick(game_ticks)
     for vid, v in pairs(SEND_LIST) do
         if v.targetId == -1 then
             -- regular radar
-            -- set id
-            server.setVehicleKeypad(vid, SELF_ID_PAD_NAME, vid)
             -- send page with ttl
             -- initialize page if not
             if cachedPage == nil then
