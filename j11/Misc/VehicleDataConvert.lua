@@ -136,4 +136,5 @@ function onTick()
     ON(22, windSpeedX)
     ON(23, windSpeedZ)
     ON(24, IN(24))
+    ON(32, IN(25))
 end

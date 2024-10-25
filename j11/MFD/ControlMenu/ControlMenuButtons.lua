@@ -255,6 +255,7 @@ end
 
 -- configs
 APA, APS, APH = nil, nil, nil
+IFFK = nil
 
 -- status
 FTWP = false
@@ -263,10 +264,11 @@ UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
 
 -- btns
-APASB = PushButton(45, 7, 13, 7, "SET", UC, UC2)
-APSSB = PushButton(45, 14, 13, 7, "SET", UC, UC2)
-APHSB = PushButton(45, 21, 13, 7, "SET", UC, UC2)
-BTNS = { APASB, APSSB, APHSB }
+APASB = PushButton(46, 6, 13, 7, "SET", UC, UC2)
+APSSB = PushButton(46, 13, 13, 7, "SET", UC, UC2)
+APHSB = PushButton(46, 20, 13, 7, "SET", UC, UC2)
+IFFSB = PushButton(46, 28, 13, 7, "SET", UC, UC2)
+BTNS = { APASB, APSSB, APHSB, IFFSB }
 
 function onTick()
     if IB(1) then
@@ -282,6 +284,8 @@ function onTick()
             APS = clamp(IN(3), 500, 1500) // 1
         elseif APHSB.op then
             APH = clamp(IN(3), 0, 359) // 1
+        elseif IFFSB.op then
+            IFFK = clamp(IN(3), 0, 9999) // 1
         end
     else
         for _, btn in ipairs(BTNS) do
@@ -302,10 +306,11 @@ function onTick()
     ON(1, APA or 0)
     ON(2, APS or 0)
     ON(3, APH or 0)
+    ON(4, IFFK or 0)
 end
 
-function TBAO(v)
-    return v == nil and "TBA" or string.format("%.0f", v)
+function TBAO(v, f)
+    return v == nil and "TBA" or string.format(f or "%.0f", v)
 end
 
 function onDraw()
@@ -313,6 +318,7 @@ function onDraw()
     DST(20, 7, TBAO(APA))
     DST(20, 14, TBAO(APS))
     DST(20, 21, FTWP and "FTWP" or TBAO(APH))
+    DST(28, 29, TBAO(IFFK, "%04d"))
 
     -- btns
     for _, btn in ipairs(BTNS) do

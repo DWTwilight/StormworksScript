@@ -63,6 +63,13 @@ function II(a, b)
     DL(a + 1, b, a + 1, b + 5)
 end
 
+function KK(a, b)
+    DL(a, b + 2, a + 2, b + 2)
+    DL(a, b, a, b + 5)
+    DL(a + 2, b, a + 2, b + 2)
+    DL(a + 2, b + 3, a + 2, b + 5)
+end
+
 function LL(a, b)
     DL(a, b + 4, a + 3, b + 4)
     DL(a, b, a, b + 5)
@@ -97,6 +104,12 @@ function TT(a, b)
     DL(a + 1, b, a + 1, b + 5)
 end
 
+function YY(a, b)
+    DL(a, b, a, b + 2)
+    DL(a + 2, b, a + 2, b + 2)
+    DL(a + 1, b + 2, a + 1, b + 5)
+end
+
 function colon(a, b)
     DL(a, b + 1, a + 1, b + 1)
     DL(a, b + 3, a + 1, b + 3)
@@ -119,6 +132,8 @@ function CST(a, b, s)
         HH(a, b)
     elseif s == "I" then
         II(a, b)
+    elseif s == "K" then
+        KK(a, b)
     elseif s == "L" then
         LL(a, b)
     elseif s == "N" then
@@ -131,6 +146,8 @@ function CST(a, b, s)
         SS(a, b)
     elseif s == "T" then
         TT(a, b)
+    elseif s == "Y" then
+        YY(a, b)
     elseif s == ":" then
         colon(a, b)
     end
@@ -173,4 +190,5 @@ function onDraw()
     DST(4, 7, "ALT:")
     DST(4, 14, "SPD:")
     DST(4, 21, "HEA:")
+    DST(0, 29, "IFFKEY:")
 end

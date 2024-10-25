@@ -1,0 +1,1 @@
+-- math.ceil(3000 + 1000 * math.sin(time * math.pi * 2 + dataLinkKey / 1000)
