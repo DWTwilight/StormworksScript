@@ -3,13 +3,39 @@ g_savedata = {
     GROUP_IDS = {}
 }
 
-TARGET_DIAL_NAME = "[CR] targetId"
-EXCLUDE_TAGS = { "trade", "resource", "storage" }
 DETACH_DISTANCE = 25 -- sub vehicle to main vehicle
+SEND_BATCH_SIZE = 6  -- send at most 6 vehicle data in one tick
+TARGET_DIAL_NAME = "[CR] targetId"
+TARGET_ID_PAD_NAME_FORMAT = "[CR] t%did"
+TARGET_POS_PAD_NAME_FORMAT = "[CR] t%d%s"
+TARGET_TTL_PAD_NAME_FORMAT = "[CR] ttl"
+SELF_ID_PAD_NAME = "[CR] id"
+EXCLUDE_TAGS = { "trade", "resource", "storage" }
+TARGET_ID_PAD_NAMES = {}
+for i = 1, SEND_BATCH_SIZE do
+    table.insert(TARGET_ID_PAD_NAMES, string.format(TARGET_ID_PAD_NAME_FORMAT, i))
+end
+TARGET_POS_PAD_NAMES = {}
+for i = 1, SEND_BATCH_SIZE do
+    table.insert(TARGET_POS_PAD_NAMES, {
+        x = string.format(TARGET_POS_PAD_NAME_FORMAT, i, "x"),
+        y = string.format(TARGET_POS_PAD_NAME_FORMAT, i, "y"),
+        z = string.format(TARGET_POS_PAD_NAME_FORMAT, i, "z")
+    })
+end
 
 -- vehicle groups
 VEHICLE_GROUPS = {}
 VG_MAPPING = {}
+
+-- vehicles that need to send
+TARGET_LIST = {}
+TARGET_MAPPING = {}
+-- vehicles to send data to
+SEND_LIST = {}
+-- refresh settings
+REFRESH_INTERVAL = 1 -- how many ticks to recalculate target list & send list
+CURRENT_INTERVAL = 0 -- current interval
 
 function vehicle(id, groupId)
     return {
@@ -17,7 +43,7 @@ function vehicle(id, groupId)
         groupId = groupId,
         matrix = nil,
         hasRadar = false,
-        targetId = nil,
+        targetId = 0,
         detached = false,
         update = function(v)
             local m, _ = server.getVehiclePos(v.id)
@@ -165,8 +191,90 @@ end
 -- Tick function that will be executed every logic tick
 function onTick(game_ticks)
     -- update each group
-    for group_id, group in pairs(VEHICLE_GROUPS) do
+    for _, group in pairs(VEHICLE_GROUPS) do
         group:update()
+    end
+
+    if CURRENT_INTERVAL >= REFRESH_INTERVAL then
+        -- reset target list and send list
+        TARGET_LIST = {}
+        TARGET_MAPPING = {}
+        SEND_LIST = {}
+        CURRENT_INTERVAL = 0
+        -- refresh lists
+        for _, group in pairs(VEHICLE_GROUPS) do
+            -- add mainV to target
+            local main_vid = group.main_vid
+            if main_vid ~= nil then
+                local mainV = group.vehicles[main_vid]
+                if mainV ~= nil then
+                    table.insert(TARGET_LIST, mainV)
+                    TARGET_MAPPING[main_vid] = mainV
+                end
+            end
+            for vid, v in pairs(group.vehicles) do
+                -- add sub vehicles that are detached to target list
+                if vid ~= main_vid and v.detached then
+                    table.insert(TARGET_LIST, v)
+                    TARGET_MAPPING[vid] = v
+                end
+                -- add vehicles that have radar to send list
+                if v.hasRadar and v.targetId ~= 0 then
+                    SEND_LIST[vid] = v
+                end
+            end
+        end
+        -- update interval
+        REFRESH_INTERVAL = (#TARGET_LIST // 6) + 1
+    end
+    CURRENT_INTERVAL = CURRENT_INTERVAL + 1
+
+    -- send data to radars
+    local cachedPage = nil
+    for vid, v in pairs(SEND_LIST) do
+        if v.targetId == -1 then
+            -- regular radar
+            -- set id
+            server.setVehicleKeypad(vid, SELF_ID_PAD_NAME, vid)
+            -- send page with ttl
+            -- initialize page if not
+            if cachedPage == nil then
+                cachedPage = {}
+                for i = (CURRENT_INTERVAL - 1) * SEND_BATCH_SIZE + 1, math.min(CURRENT_INTERVAL * SEND_BATCH_SIZE, #TARGET_LIST) do
+                    local v = TARGET_LIST[i]
+                    local x, y, z = matrix.position(v.matrix)
+                    table.insert(cachedPage, { id = v.id, x = x, y = y, z = z })
+                end
+            end
+            -- send target data
+            for i = 1, SEND_BATCH_SIZE do
+                local tData = cachedPage[i]
+                if tData == nil or tData.id == vid then
+                    -- nil target or self
+                    -- set target id pad to 0
+                    server.setVehicleKeypad(vid, TARGET_ID_PAD_NAMES[i], 0)
+                else
+                    -- set id
+                    server.setVehicleKeypad(vid, TARGET_ID_PAD_NAMES[i], tData.id)
+                    -- set pos
+                    server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[i].x, tData.x)
+                    server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[i].y, tData.y)
+                    server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[i].z, tData.z)
+                end
+            end
+            -- send ttl
+            server.setVehicleKeypad(vid, TARGET_TTL_PAD_NAME_FORMAT, REFRESH_INTERVAL)
+        else
+            -- target-specific radar
+            local t = TARGET_MAPPING[v.targetId]
+            if t ~= nil then
+                local x, y, z = matrix.position(t.matrix)
+                -- set pos
+                server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[1].x, x)
+                server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[1].y, y)
+                server.setVehicleKeypad(vid, TARGET_POS_PAD_NAMES[1].z, z)
+            end
+        end
     end
 end
 
@@ -179,9 +287,8 @@ function onCustomCommand(full_message, user_peer_id, is_admin, is_auth, command,
                 for vehicle_id, v in pairs(group.vehicles) do
                     local x, y, z = matrix.position(v.matrix)
                     server.announce("[Custom Radar]",
-                        string.format("    id: %d, hasRadar: %s, targetId: %d, detached: %s, pos: {%f, %f, %f}",
+                        string.format("    id: %d, targetId: %d, detached: %s, pos: {%f, %f, %f}",
                             vehicle_id,
-                            tostring(v.hasRadar),
                             v.hasRadar and v.targetId or -999,
                             tostring(v.detached),
                             x, y, z))
