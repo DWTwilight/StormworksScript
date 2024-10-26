@@ -215,6 +215,8 @@ function onTick()
     ON(3, MX)
     ON(4, MY)
     ON(5, ZOOM)
+    ON(6, X)
+    ON(7, Y)
 end
 
 function rotate(x, y, r)
