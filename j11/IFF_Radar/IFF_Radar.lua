@@ -23,7 +23,17 @@ function setDefaultIFFChannels()
     end
 end
 
+function setDefaultRadarData()
+    for i = 1, 25 do
+        ON(i, 0)
+    end
+    for i = 1, 6 do
+        OB(i, false)
+    end
+end
+
 function onTick()
+    setDefaultIFFChannels()
     -- IFF
     if IB(2) then
         -- IFF On
@@ -44,13 +54,26 @@ function onTick()
             IFF_MAPPING[id] = nil
         end
         -- set IFF occupied channels
-        setDefaultIFFChannels()
         for _, t in pairs(IFF_MAPPING) do
             OB(33 - t.channel, true)
         end
     else
         -- IFF Off
         IFF_MAPPING = {}
-        setDefaultIFFChannels()
+    end
+
+    setDefaultRadarData()
+    if IB(1) then
+        for i = 1, 6 do
+            local id = IN(4 * i - 1)
+            if id > 0 then
+                ON(4 * i - 3, id)
+                ON(4 * i - 2, IN(4 * i))
+                ON(4 * i - 1, IN(4 * i + 1))
+                ON(4 * i, IN(4 * i + 2))
+                OB(i, IFF_MAPPING[id] ~= nil)
+            end
+        end
+        ON(25, IN(25))
     end
 end
