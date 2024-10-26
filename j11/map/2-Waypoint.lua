@@ -82,12 +82,20 @@ function waypoint(x, y)
         x = x,
         y = y,
         pressed = false,
+        press = function(wp, tx, ty)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
+            if PIR(tx, ty, sx - HWPW, sy - HWPW, WPW, WPW) then
+                wp.pressed = not wp.pressed
+                return true
+            end
+            return false
+        end,
         draw = function(wp)
             -- set color
             SC(wp.pressed and WPC2 or WPC)
             -- get screen pos
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, x, y)
-            DRF(sx - WPW / 2, sy - WPW / 2, WPW, WPW)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
+            DRF(sx - HWPW, sy - HWPW, WPW, WPW)
         end
     }
 end
@@ -98,9 +106,11 @@ WPC = H2RGB(PT("Waypoint Color"))
 WPC2 = H2RGB(PT("Waypoint Press Color"))
 DELC = H2RGB(PT("Delete Color"))
 WPW = PN("Waypoint Width")
+HWPW = WPW // 2
 MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
 WAYPOINTS = {}
+SELECTED_WP = nil
 TOUCH_FLAG = false
 
 ADD_WP_BTN = PushButton(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
@@ -130,8 +140,28 @@ function onTick()
         elseif CLEAR_ALL_BTN.pressed and IB(2) then
             -- clear all wps
             WAYPOINTS = {}
+            SELECTED_WP = nil
         else
             pressFlag = false
+            if IB(2) then
+                -- press wps
+                for i, wp in ipairs(WAYPOINTS) do
+                    if wp:press(tx, ty) then
+                        pressFlag = true
+                        -- check status
+                        if wp.pressed then
+                            if SELECTED_WP ~= nil then
+                                SELECTED_WP.pressed = false
+                            end
+                            SELECTED_WP = wp
+                        else
+                            -- unpress
+                            SELECTED_WP = nil
+                        end
+                        break
+                    end
+                end
+            end
         end
 
         if not pressFlag then
