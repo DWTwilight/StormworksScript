@@ -50,19 +50,11 @@ function PushButton(x, y, w, h, text, color, pressColor, visible, tox, toy)
         c = color,
         pc = pressColor,
         pressed = false,
-        onPress = false,
         v = visible,
         tox = tox,
         toy = toy,
         press = function(btn, tx, ty)
-            if btn.v then
-                local pressed = PIR(tx, ty, btn.x, btn.y, btn.w, btn.h)
-                btn.onPress = pressed and not btn.pressed
-                btn.pressed = pressed
-            else
-                btn.onPress = false
-                btn.pressed = false
-            end
+            btn.pressed = btn.v and PIR(tx, ty, btn.x, btn.y, btn.w, btn.h)
         end,
         clearPress = function(btn)
             btn.onPress = false
@@ -104,6 +96,7 @@ SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
 UC2 = H2RGB(PT("Basic Secondary Color"))
 WPC = H2RGB(PT("Waypoint Color"))
 WPC2 = H2RGB(PT("Waypoint Press Color"))
+DELC = H2RGB(PT("Delete Color"))
 WPW = PN("Waypoint Width")
 MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
@@ -111,15 +104,19 @@ WAYPOINTS = {}
 TOUCH_FLAG = false
 
 ADD_WP_BTN = PushButton(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
-BTNS = { ADD_WP_BTN }
+CLEAR_ALL_BTN = PushButton(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
+BTNS = { ADD_WP_BTN, CLEAR_ALL_BTN }
 
 function onTick()
     -- update map pos and zoom
     MX, MY, ZOOM, X, Y = IN(3), IN(4), IN(5), IN(6), IN(7)
 
+    -- set clear btn visible or not
+    CLEAR_ALL_BTN.v = #WAYPOINTS > 0
+
     if IB(1) then
         -- on touch
-        local pressFlag = false
+        local pressFlag = true
         local tx, ty = IN(1), IN(2)
 
         -- press buttons
@@ -127,12 +124,14 @@ function onTick()
             btn:press(tx, ty)
         end
 
-        if ADD_WP_BTN.pressed then
-            pressFlag = true
-            if ADD_WP_BTN.onPress then
-                -- add waypoint
-                table.insert(WAYPOINTS, waypoint(MX, MY))
-            end
+        if ADD_WP_BTN.pressed and IB(2) then
+            -- add waypoint
+            table.insert(WAYPOINTS, waypoint(MX, MY))
+        elseif CLEAR_ALL_BTN.pressed and IB(2) then
+            -- clear all wps
+            WAYPOINTS = {}
+        else
+            pressFlag = false
         end
 
         if not pressFlag then
