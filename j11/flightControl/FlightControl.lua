@@ -65,7 +65,8 @@ end
 function onTick()
     -- controls
     local rollMInput, pitchMInput, yawMInput = IN(1), IN(2), IN(3)
-    local manualControl = (abs(rollMInput) + abs(pitchMInput) + abs(yawMInput) > 0) or IB(3) or IB(4)
+    local manualControl = (abs(rollMInput) + abs(pitchMInput) + abs(yawMInput) > 0)
+    local manualThrottleControl = IB(3) or IB(4)
     local landed = IB(1)
     local ap = IB(2)
     local throttle = IN(18)
@@ -137,7 +138,7 @@ function onTick()
                     -AP_MAX_ROLL_SPEED, AP_MAX_ROLL_SPEED)
                 local pitchSpeed = clamp(AP_MAX_PITCH_SPEED * (calRadDiff(pitchTarget, pitch) / m.pi * 5),
                     -AP_MAX_PITCH_SPEED, AP_MAX_PITCH_SPEED)
-                local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 2.5),
+                local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 3),
                     -AP_MAX_YAW_SPEED, AP_MAX_YAW_SPEED)
 
                 pitchSpeed, yawSpeed = convertWithRoll(pitchSpeed, yawSpeed, roll)
@@ -170,14 +171,21 @@ function onTick()
                 setOutputs(apRoll, apPitch, apYaw)
 
                 -- auto throttle
-                apThrottle = clamp(apThrottle +
-                    clamp((speedTarget - speed) / AP_THROTTLE_FACTOR,
-                        -AP_THROTTLE_SENSITIVITY, AP_THROTTLE_SENSITIVITY),
-                    0, 1)
-                -- throttle
-                ON(9, apThrottle)
-                OB(5, apThrottle - throttle > AP_THROTTLE_PRECISION)
-                OB(6, throttle - apThrottle > AP_THROTTLE_PRECISION)
+                if manualThrottleControl then
+                    apThrottle = throttle
+                    ON(9, throttle)
+                    OB(5, IB(3))
+                    OB(6, IB(4))
+                else
+                    apThrottle = clamp(apThrottle +
+                        clamp((speedTarget - speed) / AP_THROTTLE_FACTOR,
+                            -AP_THROTTLE_SENSITIVITY, AP_THROTTLE_SENSITIVITY),
+                        0, 1)
+                    -- throttle
+                    ON(9, apThrottle)
+                    OB(5, apThrottle - throttle > AP_THROTTLE_PRECISION)
+                    OB(6, throttle - apThrottle > AP_THROTTLE_PRECISION)
+                end
             else
                 -- manual control
                 -- apply trim
