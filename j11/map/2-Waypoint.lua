@@ -154,9 +154,10 @@ function onTick()
     for i = 1, 6 do
         local id, x, y, z, ttl, f = IN(4 * i - 3), IN(4 * i - 2), IN(4 * i - 1), IN(4 * i), IN(25), IB(i)
         if id > 0 then
-            if S_T ~= nil and S_T.id == id then
+            if RTS[id] ~= nil then
                 -- do update
-                S_T.x, S_T.y, S_T.z, S_T.ttl, S_T.f = x, y, z, ttl, f
+                local t = RTS[id]
+                t.x, t.y, t.z, t.ttl, t.f = x, y, z, ttl, f
             else
                 RTS[id] = tar(x, y, z, id, ttl, f)
             end
