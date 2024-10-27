@@ -102,9 +102,9 @@ WPW = PN("Waypoint Width")
 HWPW = WPW // 2
 MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
-WAYPOINTS = {}
-SELECTED_WP = nil
-FCS_MODE = false
+WPS = {}
+S_WP = nil
+FCS_M = false
 
 ADDWP_BTN = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
 CLR_BTN = PBTN(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
@@ -113,7 +113,7 @@ RM_BTN = PBTN(2, SCR_H - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
 BTNS = { ADDWP_BTN, CLR_BTN, FCS_BTN, RM_BTN }
 
 function findWP(x, y)
-    for i, wp in ipairs(WAYPOINTS) do
+    for i, wp in ipairs(WPS) do
         if wp.x == x and wp.y == y then
             return i, wp
         end
@@ -126,11 +126,11 @@ function onTick()
     MX, MY, ZOOM, X, Y = IN(3), IN(4), IN(5), IN(6), IN(7)
 
     -- set clear btn visible or not
-    CLR_BTN.v = #WAYPOINTS > 0
+    CLR_BTN.v = #WPS > 0
     -- set focus btn visible or not
-    FCS_BTN.v = SELECTED_WP ~= nil and not FCS_MODE
+    FCS_BTN.v = S_WP ~= nil and not FCS_M
     -- set rm btn visible or not
-    RM_BTN.v = SELECTED_WP ~= nil
+    RM_BTN.v = S_WP ~= nil
 
     if IB(1) then
         -- on touch
@@ -147,38 +147,39 @@ function onTick()
                 -- add waypoint if not duplicated
                 local i, _ = findWP(MX, MY)
                 if i == -1 then
-                    table.insert(WAYPOINTS, waypoint(MX, MY))
+                    table.insert(WPS, waypoint(MX, MY))
                 end
             elseif CLR_BTN.pressed then
                 -- clear all wps
-                WAYPOINTS = {}
-                SELECTED_WP = nil
+                WPS = {}
+                S_WP = nil
             elseif FCS_BTN.pressed then
                 -- focus on selected wp
-                FCS_MODE = true
+                FCS_M = true
             elseif RM_BTN.pressed then
                 -- rm selected wp
-                local i, _ = findWP(SELECTED_WP.x, SELECTED_WP.y)
-                table.remove(WAYPOINTS, i)
-                SELECTED_WP = nil
+                local i, _ = findWP(S_WP.x, S_WP.y)
+                table.remove(WPS, i)
+                S_WP = nil
             else
                 pressFlag = false
                 -- press wps
-                for i, wp in ipairs(WAYPOINTS) do
+                for i, wp in ipairs(WPS) do
                     if wp:press(tx, ty) then
                         pressFlag = true
                         -- check status
                         if wp.pressed then
-                            if SELECTED_WP ~= nil then
-                                SELECTED_WP.pressed = false
+                            if S_WP ~= nil then
+                                -- unpress the previous selected one
+                                S_WP.pressed = false
                             end
-                            SELECTED_WP = wp
+                            S_WP = wp
                         else
                             -- unpress
-                            SELECTED_WP = nil
+                            S_WP = nil
                         end
                         -- unfocus
-                        FCS_MODE = false
+                        FCS_M = false
                         break
                     end
                 end
@@ -207,14 +208,14 @@ function onTick()
     ON(5, ZOOM)
 
     -- update focus mode
-    FCS_MODE = FCS_MODE and SELECTED_WP ~= nil and not IB(3)
-    OB(3, FCS_MODE)
-    if FCS_MODE then
+    FCS_M = FCS_M and S_WP ~= nil and not IB(3)
+    OB(3, FCS_M)
+    if FCS_M then
         -- focus mode
         -- target x,y,z
-        ON(6, SELECTED_WP.x)
+        ON(6, S_WP.x)
         ON(7, 0)
-        ON(8, SELECTED_WP.y)
+        ON(8, S_WP.y)
     end
 end
 
@@ -222,13 +223,13 @@ function onDraw()
     -- draw waypoint lines
     SC(UC2)
     local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, X, Y)
-    for _, wp in ipairs(WAYPOINTS) do
+    for _, wp in ipairs(WPS) do
         local x, y = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
         DL(sx, sy, x, y)
         sx, sy = x, y
     end
     -- draw waypoints
-    for _, wp in ipairs(WAYPOINTS) do
+    for _, wp in ipairs(WPS) do
         wp:draw()
     end
 
