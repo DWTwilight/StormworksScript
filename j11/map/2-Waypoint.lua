@@ -14,6 +14,10 @@ P = property
 PN = P.getNumber
 PT = P.getText
 
+T = table
+TRM = T.remove
+TIN = T.insert
+
 function H2RGB(e)
     e = e:gsub("#", "")
     return {
@@ -110,6 +114,7 @@ WPC = H2RGB(PT("Waypoint Color"))
 WPC2 = H2RGB(PT("Waypoint Press Color"))
 DELC = H2RGB(PT("Delete Color"))
 FC = H2RGB(PT("Friendly Color"))
+JWPD = PN("Jump Waypoint Distance")
 WPW = PN("Waypoint Width")
 HWPW = WPW // 2
 MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
@@ -119,11 +124,11 @@ RTS = {}
 S_T = nil
 FCS_M = false
 
-ADDWP_BTN = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
-CLR_BTN = PBTN(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
-FCS_BTN = PBTN(2, SCR_H - 22, 18, 9, "FCS", UC, UC2, false, 2, 2)
-RM_BTN = PBTN(2, SCR_H - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
-BTNS = { ADDWP_BTN, CLR_BTN, FCS_BTN, RM_BTN }
+AWPB = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
+CLRB = PBTN(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
+FCSB = PBTN(2, SCR_H - 22, 18, 9, "FCS", UC, UC2, false, 2, 2)
+RMB = PBTN(2, SCR_H - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
+BTNS = { AWPB, CLRB, FCSB, RMB }
 
 function findWP(x, y)
     for i, wp in ipairs(WPS) do
@@ -132,6 +137,10 @@ function findWP(x, y)
         end
     end
     return -1, nil
+end
+
+function dist(x1, y1, x2, y2)
+    return ((x1 - x2) ^ 2 + (y1 - y2) ^ 2) ^ 0.5
 end
 
 function onTick()
@@ -158,7 +167,7 @@ function onTick()
     for id, t in pairs(RTS) do
         t.ttl = t.ttl - 1
         if t.ttl < 0 then
-            table.insert(toRM, id)
+            TIN(toRM, id)
         end
     end
     for _, id in ipairs(toRM) do
@@ -173,11 +182,11 @@ function onTick()
     MX, MY, ZOOM, X, Y = IN(28), IN(29), IN(30), IN(31), IN(32)
 
     -- set clear btn visible or not
-    CLR_BTN.v = #WPS > 0
+    CLRB.v = #WPS > 0
     -- set focus btn visible or not
-    FCS_BTN.v = S_T ~= nil and not FCS_M
+    FCSB.v = S_T ~= nil and not FCS_M
     -- set rm btn visible or not
-    RM_BTN.v = S_T ~= nil and S_T.id == nil
+    RMB.v = S_T ~= nil and S_T.id == nil
 
     if IB(7) then
         -- on touch
@@ -190,23 +199,23 @@ function onTick()
         end
 
         if IB(8) then
-            if ADDWP_BTN.pressed then
+            if AWPB.pressed then
                 -- add waypoint if not duplicated
                 local i, _ = findWP(MX, MY)
                 if i == -1 then
-                    table.insert(WPS, tar(MX, 0, MY))
+                    TIN(WPS, tar(MX, 0, MY))
                 end
-            elseif CLR_BTN.pressed then
+            elseif CLRB.pressed then
                 -- clear all wps
                 WPS = {}
                 S_T = nil
-            elseif FCS_BTN.pressed then
+            elseif FCSB.pressed then
                 -- focus on selected wp
                 FCS_M = true
-            elseif RM_BTN.pressed then
+            elseif RMB.pressed then
                 -- rm selected wp
                 local i, _ = findWP(S_T.x, S_T.z)
-                table.remove(WPS, i)
+                TRM(WPS, i)
                 S_T = nil
             else
                 pressFlag = false
@@ -292,9 +301,16 @@ function onTick()
     end
     -- set next waypoint
     if #WPS > 0 then
+        local wp = WPS[1]
         OB(2, true)
-        ON(5, WPS[1].x)
-        ON(6, WPS[1].z)
+        ON(5, wp.x)
+        ON(6, wp.z)
+
+        -- check ap & FTWP
+        if IB(10) and IB(11) and dist(X, Y, wp.x, wp.z) < JWPD then
+            -- remove this waypoint
+            TRM(WPS, 1)
+        end
     else
         OB(2, false)
         ON(5, 0)

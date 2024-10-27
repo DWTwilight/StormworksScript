@@ -300,14 +300,14 @@ function onTick()
         APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
     end
 
-    -- mannual throttle control, change speed target
-    if IB(5) or IB(6) then
+    -- when AP mannual throttle control, change speed target
+    if IB(7) and (IB(5) or IB(6)) then
         APS = clamp(IN(5) * 3.6, 500, 1500) // 1
     end
 
     -- Fly to waypoint
     FTWP = IB(4)
-    if FTWP then
+    if FTWP and (IN(7) ~= 0 or IN(8) ~= 0) then
         -- override yawtarget
         APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
     end
