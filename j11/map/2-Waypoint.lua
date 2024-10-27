@@ -1,15 +1,7 @@
-S2M = map.screenToMap
 M2S = map.mapToScreen
-
-M = math
-MAX = M.max
-MIN = M.min
-COS = M.cos
-SIN = M.sin
 
 S = screen
 DRF = S.drawRectF
-DTAF = S.drawTriangleF
 DT = S.drawText
 DL = S.drawLine
 
@@ -40,7 +32,7 @@ function PIR(x, y, rectX, rectY, rectW, rectH)
     return x >= rectX and y > rectY and x < rectX + rectW and y <= rectY + rectH
 end
 
-function PushButton(x, y, w, h, text, color, pressColor, visible, tox, toy)
+function PBTN(x, y, w, h, text, color, pressColor, visible, tox, toy)
     return {
         x = x,
         y = y,
@@ -84,7 +76,7 @@ function waypoint(x, y)
         pressed = false,
         press = function(wp, tx, ty)
             local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
-            if PIR(tx, ty, sx - HWPW, sy - HWPW, WPW, WPW) then
+            if PIR(tx, ty, sx - HWPW - 1, sy - HWPW - 1, WPW + 2, WPW + 2) then
                 wp.pressed = not wp.pressed
                 return true
             end
@@ -112,13 +104,13 @@ MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
 WAYPOINTS = {}
 SELECTED_WP = nil
-TOUCH_FLAG = false
-FOCUS_MODE = false
+FCS_MODE = false
 
-ADD_WP_BTN = PushButton(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
-CLEAR_ALL_BTN = PushButton(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
-FOCUS_BTN = PushButton(2, SCR_H - 11, 18, 9, "FCS", UC, UC2, false, 2, 2)
-BTNS = { ADD_WP_BTN, CLEAR_ALL_BTN, FOCUS_BTN }
+ADDWP_BTN = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
+CLR_BTN = PBTN(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
+FCS_BTN = PBTN(2, SCR_H - 22, 18, 9, "FCS", UC, UC2, false, 2, 2)
+RM_BTN = PBTN(2, SCR_H - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
+BTNS = { ADDWP_BTN, CLR_BTN, FCS_BTN, RM_BTN }
 
 function findWP(x, y)
     for i, wp in ipairs(WAYPOINTS) do
@@ -134,9 +126,11 @@ function onTick()
     MX, MY, ZOOM, X, Y = IN(3), IN(4), IN(5), IN(6), IN(7)
 
     -- set clear btn visible or not
-    CLEAR_ALL_BTN.v = #WAYPOINTS > 0
+    CLR_BTN.v = #WAYPOINTS > 0
     -- set focus btn visible or not
-    FOCUS_BTN.v = SELECTED_WP ~= nil and not FOCUS_MODE
+    FCS_BTN.v = SELECTED_WP ~= nil and not FCS_MODE
+    -- set rm btn visible or not
+    RM_BTN.v = SELECTED_WP ~= nil
 
     if IB(1) then
         -- on touch
@@ -148,22 +142,27 @@ function onTick()
             btn:press(tx, ty)
         end
 
-        if ADD_WP_BTN.pressed and IB(2) then
-            -- add waypoint if not duplicated
-            local i, _ = findWP(MX, MY)
-            if i == -1 then
-                table.insert(WAYPOINTS, waypoint(MX, MY))
-            end
-        elseif CLEAR_ALL_BTN.pressed and IB(2) then
-            -- clear all wps
-            WAYPOINTS = {}
-            SELECTED_WP = nil
-        elseif FOCUS_BTN.pressed and IB(2) then
-            -- focus on selected wp
-            FOCUS_MODE = true
-        else
-            pressFlag = false
-            if IB(2) then
+        if IB(2) then
+            if ADDWP_BTN.pressed then
+                -- add waypoint if not duplicated
+                local i, _ = findWP(MX, MY)
+                if i == -1 then
+                    table.insert(WAYPOINTS, waypoint(MX, MY))
+                end
+            elseif CLR_BTN.pressed then
+                -- clear all wps
+                WAYPOINTS = {}
+                SELECTED_WP = nil
+            elseif FCS_BTN.pressed then
+                -- focus on selected wp
+                FCS_MODE = true
+            elseif RM_BTN.pressed then
+                -- rm selected wp
+                local i, _ = findWP(SELECTED_WP.x, SELECTED_WP.y)
+                table.remove(WAYPOINTS, i)
+                SELECTED_WP = nil
+            else
+                pressFlag = false
                 -- press wps
                 for i, wp in ipairs(WAYPOINTS) do
                     if wp:press(tx, ty) then
@@ -179,7 +178,7 @@ function onTick()
                             SELECTED_WP = nil
                         end
                         -- unfocus
-                        FOCUS_MODE = false
+                        FCS_MODE = false
                         break
                     end
                 end
@@ -208,9 +207,9 @@ function onTick()
     ON(5, ZOOM)
 
     -- update focus mode
-    FOCUS_MODE = FOCUS_MODE and SELECTED_WP ~= nil and not IB(3)
-    OB(3, FOCUS_MODE)
-    if FOCUS_MODE then
+    FCS_MODE = FCS_MODE and SELECTED_WP ~= nil and not IB(3)
+    OB(3, FCS_MODE)
+    if FCS_MODE then
         -- focus mode
         -- target x,y,z
         ON(6, SELECTED_WP.x)
