@@ -136,6 +136,9 @@ function transformTouchInput(tx, ty)
 end
 
 function onTick()
+    -- wether to clear focus, default false
+    OB(3, false)
+
     -- handle touch input
     if IB(1) then
         local tx, ty = transformTouchInput(IN(4), IN(5))
@@ -155,6 +158,7 @@ function onTick()
         elseif RESET_BTN.pressed and RESET_BTN.onPress then
             FM = true
             RESET_BTN.v = false
+            OB(3, true)
         else
             pressFlag = false
         end
@@ -193,12 +197,21 @@ function onTick()
         FM = false
         MTX, MTY = IN(6), IN(7)
         RESET_BTN.v = true
+        OB(3, true)
     end
 
     -- handle map touch
     if IB(3) then
         FM = false
         MTX, MTY = IN(8), IN(9)
+        RESET_BTN.v = true
+        OB(3, true)
+    end
+
+    -- focus on target
+    if IB(4) and not RESET_BTN.onPress and not IB(2) and not IB(3) then
+        FM = false
+        MTX, MTY = IN(10), IN(11)
         RESET_BTN.v = true
     end
 

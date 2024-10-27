@@ -101,6 +101,7 @@ function waypoint(x, y)
 end
 
 SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
+UC = H2RGB(PT("Basic Primary Color"))
 UC2 = H2RGB(PT("Basic Secondary Color"))
 WPC = H2RGB(PT("Waypoint Color"))
 WPC2 = H2RGB(PT("Waypoint Press Color"))
@@ -112,10 +113,21 @@ X, Y = 0, 0            -- vehicleX, vehicleY
 WAYPOINTS = {}
 SELECTED_WP = nil
 TOUCH_FLAG = false
+FOCUS_MODE = false
 
 ADD_WP_BTN = PushButton(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
 CLEAR_ALL_BTN = PushButton(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
-BTNS = { ADD_WP_BTN, CLEAR_ALL_BTN }
+FOCUS_BTN = PushButton(2, SCR_H - 11, 18, 9, "FCS", UC, UC2, false, 2, 2)
+BTNS = { ADD_WP_BTN, CLEAR_ALL_BTN, FOCUS_BTN }
+
+function findWP(x, y)
+    for i, wp in ipairs(WAYPOINTS) do
+        if wp.x == x and wp.y == y then
+            return i, wp
+        end
+    end
+    return -1, nil
+end
 
 function onTick()
     -- update map pos and zoom
@@ -123,6 +135,8 @@ function onTick()
 
     -- set clear btn visible or not
     CLEAR_ALL_BTN.v = #WAYPOINTS > 0
+    -- set focus btn visible or not
+    FOCUS_BTN.v = SELECTED_WP ~= nil and not FOCUS_MODE
 
     if IB(1) then
         -- on touch
@@ -135,12 +149,18 @@ function onTick()
         end
 
         if ADD_WP_BTN.pressed and IB(2) then
-            -- add waypoint
-            table.insert(WAYPOINTS, waypoint(MX, MY))
+            -- add waypoint if not duplicated
+            local i, _ = findWP(MX, MY)
+            if i == -1 then
+                table.insert(WAYPOINTS, waypoint(MX, MY))
+            end
         elseif CLEAR_ALL_BTN.pressed and IB(2) then
             -- clear all wps
             WAYPOINTS = {}
             SELECTED_WP = nil
+        elseif FOCUS_BTN.pressed and IB(2) then
+            -- focus on selected wp
+            FOCUS_MODE = true
         else
             pressFlag = false
             if IB(2) then
@@ -158,6 +178,8 @@ function onTick()
                             -- unpress
                             SELECTED_WP = nil
                         end
+                        -- unfocus
+                        FOCUS_MODE = false
                         break
                     end
                 end
@@ -184,6 +206,17 @@ function onTick()
     ON(3, MX)
     ON(4, MY)
     ON(5, ZOOM)
+
+    -- update focus mode
+    FOCUS_MODE = FOCUS_MODE and SELECTED_WP ~= nil and not IB(3)
+    OB(3, FOCUS_MODE)
+    if FOCUS_MODE then
+        -- focus mode
+        -- target x,y,z
+        ON(6, SELECTED_WP.x)
+        ON(7, 0)
+        ON(8, SELECTED_WP.y)
+    end
 end
 
 function onDraw()
