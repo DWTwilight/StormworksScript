@@ -135,6 +135,8 @@ function transformTouchInput(tx, ty)
     return tx * SCR_W / DW + (SCR_W / DW) // 3, ty * SCR_H / DH + (SCR_H / DH) // 3
 end
 
+RESET_DURATION = 0
+
 function onTick()
     -- wether to clear focus, default false
     OB(3, false)
@@ -159,6 +161,7 @@ function onTick()
             FM = true
             RESET_BTN.v = false
             OB(3, true)
+            RESET_DURATION = 6
         else
             pressFlag = false
         end
@@ -209,10 +212,12 @@ function onTick()
     end
 
     -- focus on target
-    if IB(4) and not RESET_BTN.onPress and not IB(2) and not IB(3) then
+    if IB(4) and RESET_DURATION <= 0 and not IB(2) and not IB(3) then
         FM = false
         MTX, MTY = IN(10), IN(11)
         RESET_BTN.v = true
+    elseif RESET_DURATION > 0 then
+        RESET_DURATION = RESET_DURATION - 1
     end
 
     -- get current vehicle pos and heading

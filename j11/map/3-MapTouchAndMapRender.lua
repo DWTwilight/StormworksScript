@@ -16,11 +16,11 @@ MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 
 function onTick()
     -- update map pos and zoom
-    MX, MY, ZOOM = IN(3), IN(4), IN(5)
+    MX, MY, ZOOM = IN(9), IN(10), IN(11)
 
-    if IB(2) then
+    if IB(4) then
         -- on touch
-        local mapTargetX, mapTargetY = S2M(MX, MY, ZOOM, SCR_W, SCR_H, IN(1), IN(2))
+        local mapTargetX, mapTargetY = S2M(MX, MY, ZOOM, SCR_W, SCR_H, IN(7), IN(8))
         -- map touch pulse
         OB(1, true)
         ON(1, mapTargetX)

@@ -78,19 +78,26 @@ function tar(x, y, z, id, ttl, f)
         ttl = ttl,
         f = f,
         pressed = false,
-        press = function(wp, tx, ty)
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
+        press = function(t, tx, ty)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, t.x, t.z)
             if PIR(tx, ty, sx - HWPW - 1, sy - HWPW - 1, WPW + 2, WPW + 2) then
-                wp.pressed = not wp.pressed
+                t.pressed = not t.pressed
                 return true
             end
             return false
         end,
-        draw = function(wp)
-            -- set color
-            SC(id == nil and (wp.pressed and WPC2 or WPC) or (f and FC or DELC))
+        draw = function(t)
             -- get screen pos
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, t.x, t.z)
+            if t.id == nil then
+                SC(t.pressed and WPC2 or WPC)
+            else
+                if t.pressed then
+                    SC(UC2)
+                    DRF(sx - HWPW - 1, sy - HWPW - 1, WPW + 2, WPW + 2)
+                end
+                SC(t.f and FC or DELC)
+            end
             DRF(sx - HWPW, sy - HWPW, WPW, WPW)
         end
     }
@@ -109,7 +116,7 @@ MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
 WPS = {}
 RTS = {}
-S_WP = nil
+S_T = nil
 FCS_M = false
 
 ADDWP_BTN = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
@@ -129,16 +136,21 @@ end
 
 function onTick()
     -- set default touch data
-    OB(1, false) -- touch
-    OB(2, false) -- onTouch
-    ON(1, 0)     -- tx
-    ON(2, 0)     -- ty
+    OB(3, false) -- touch
+    OB(4, false) -- onTouch
+    ON(7, 0)     -- tx
+    ON(8, 0)     -- ty
 
     -- read radar data
     for i = 1, 6 do
-        local id, x, y, z = IN(4 * i - 3), IN(4 * i - 2), IN(4 * i - 1), IN(4 * i)
+        local id, x, y, z, ttl, f = IN(4 * i - 3), IN(4 * i - 2), IN(4 * i - 1), IN(4 * i), IN(25), IB(i)
         if id > 0 then
-            RTS[id] = tar(x, y, z, id, IN(25), IB(i))
+            if S_T ~= nil and S_T.id == id then
+                -- do update
+                S_T.x, S_T.y, S_T.z, S_T.ttl, S_T.f = x, y, z, ttl, f
+            else
+                RTS[id] = tar(x, y, z, id, ttl, f)
+            end
         end
     end
     -- refresh radar data
@@ -151,9 +163,9 @@ function onTick()
     end
     for _, id in ipairs(toRM) do
         RTS[id] = nil
-        if S_WP ~= nil and S_WP.id == id then
+        if S_T ~= nil and S_T.id == id then
             -- clear selected
-            S_WP = nil
+            S_T = nil
         end
     end
 
@@ -163,9 +175,9 @@ function onTick()
     -- set clear btn visible or not
     CLR_BTN.v = #WPS > 0
     -- set focus btn visible or not
-    FCS_BTN.v = S_WP ~= nil and not FCS_M
+    FCS_BTN.v = S_T ~= nil and not FCS_M
     -- set rm btn visible or not
-    RM_BTN.v = S_WP ~= nil and S_WP.id == nil
+    RM_BTN.v = S_T ~= nil and S_T.id == nil
 
     if IB(7) then
         -- on touch
@@ -187,35 +199,57 @@ function onTick()
             elseif CLR_BTN.pressed then
                 -- clear all wps
                 WPS = {}
-                S_WP = nil
+                S_T = nil
             elseif FCS_BTN.pressed then
                 -- focus on selected wp
                 FCS_M = true
             elseif RM_BTN.pressed then
                 -- rm selected wp
-                local i, _ = findWP(S_WP.x, S_WP.z)
+                local i, _ = findWP(S_T.x, S_T.z)
                 table.remove(WPS, i)
-                S_WP = nil
+                S_T = nil
             else
                 pressFlag = false
-                -- press wps
-                for i, wp in ipairs(WPS) do
-                    if wp:press(tx, ty) then
+                -- press radar targets
+                for _, t in pairs(RTS) do
+                    if t:press(tx, ty) then
                         pressFlag = true
-                        -- check status
-                        if wp.pressed then
-                            if S_WP ~= nil then
+                        if t.pressed then
+                            if S_T ~= nil then
                                 -- unpress the previous selected one
-                                S_WP.pressed = false
+                                S_T.pressed = false
                             end
-                            S_WP = wp
+                            S_T = t
                         else
                             -- unpress
-                            S_WP = nil
+                            S_T = nil
                         end
                         -- unfocus
                         FCS_M = false
                         break
+                    end
+                end
+
+                if not pressFlag then
+                    -- press wps
+                    for i, wp in ipairs(WPS) do
+                        if wp:press(tx, ty) then
+                            pressFlag = true
+                            -- check status
+                            if wp.pressed then
+                                if S_T ~= nil then
+                                    -- unpress the previous selected one
+                                    S_T.pressed = false
+                                end
+                                S_T = wp
+                            else
+                                -- unpress
+                                S_T = nil
+                            end
+                            -- unfocus
+                            FCS_M = false
+                            break
+                        end
                     end
                 end
             end
@@ -223,30 +257,48 @@ function onTick()
 
         if not pressFlag then
             -- pass touch data to next script
-            OB(1, true)  -- touch
-            OB(2, IB(8)) -- onTouch
-            ON(1, tx)    -- tx
-            ON(2, ty)    -- ty
+            OB(3, true)  -- touch
+            OB(4, IB(8)) -- onTouch
+            ON(7, tx)    -- tx
+            ON(8, ty)    -- ty
         end
     else
         for _, btn in ipairs(BTNS) do
             btn:clearPress()
         end
     end
-    ON(3, MX)
-    ON(4, MY)
-    ON(5, ZOOM)
+    ON(9, MX)
+    ON(10, MY)
+    ON(11, ZOOM)
 
     -- update focus mode
-    FCS_M = FCS_M and S_WP ~= nil and not IB(9)
+    FCS_M = FCS_M and S_T ~= nil and not IB(9)
     OB(3, FCS_M)
-    if FCS_M then
-        -- focus mode
+    -- set selected data
+    if S_T ~= nil then
+        -- selected target
+        OB(1, true)
         -- target id,x,y,z
-        ON(6, S_WP.id or 0)
-        ON(7, S_WP.x)
-        ON(8, S_WP.y)
-        ON(9, S_WP.z)
+        ON(1, S_T.id or 0)
+        ON(2, S_T.x)
+        ON(3, S_T.y)
+        ON(4, S_T.z)
+    else
+        OB(1, false)
+        ON(1, 0)
+        ON(2, 0)
+        ON(3, 0)
+        ON(4, 0)
+    end
+    -- set next waypoint
+    if #WPS > 0 then
+        OB(2, true)
+        ON(5, WPS[1].x)
+        ON(6, WPS[1].z)
+    else
+        OB(2, false)
+        ON(5, 0)
+        ON(6, 0)
     end
 end
 
