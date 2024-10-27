@@ -69,13 +69,17 @@ function PBTN(x, y, w, h, text, color, pressColor, visible, tox, toy)
     }
 end
 
-function waypoint(x, y)
+function tar(x, y, z, id, ttl, f)
     return {
         x = x,
         y = y,
+        z = z,
+        id = id,
+        ttl = ttl,
+        f = f,
         pressed = false,
         press = function(wp, tx, ty)
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
             if PIR(tx, ty, sx - HWPW - 1, sy - HWPW - 1, WPW + 2, WPW + 2) then
                 wp.pressed = not wp.pressed
                 return true
@@ -84,9 +88,9 @@ function waypoint(x, y)
         end,
         draw = function(wp)
             -- set color
-            SC(wp.pressed and WPC2 or WPC)
+            SC(id == nil and (wp.pressed and WPC2 or WPC) or (f and FC or DELC))
             -- get screen pos
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
+            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
             DRF(sx - HWPW, sy - HWPW, WPW, WPW)
         end
     }
@@ -98,11 +102,13 @@ UC2 = H2RGB(PT("Basic Secondary Color"))
 WPC = H2RGB(PT("Waypoint Color"))
 WPC2 = H2RGB(PT("Waypoint Press Color"))
 DELC = H2RGB(PT("Delete Color"))
+FC = H2RGB(PT("Friendly Color"))
 WPW = PN("Waypoint Width")
 HWPW = WPW // 2
 MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
 WPS = {}
+RTS = {}
 S_WP = nil
 FCS_M = false
 
@@ -114,7 +120,7 @@ BTNS = { ADDWP_BTN, CLR_BTN, FCS_BTN, RM_BTN }
 
 function findWP(x, y)
     for i, wp in ipairs(WPS) do
-        if wp.x == x and wp.y == y then
+        if wp.x == x and wp.z == y then
             return i, wp
         end
     end
@@ -122,32 +128,61 @@ function findWP(x, y)
 end
 
 function onTick()
+    -- set default touch data
+    OB(1, false) -- touch
+    OB(2, false) -- onTouch
+    ON(1, 0)     -- tx
+    ON(2, 0)     -- ty
+
+    -- read radar data
+    for i = 1, 6 do
+        local id, x, y, z = IN(4 * i - 3), IN(4 * i - 2), IN(4 * i - 1), IN(4 * i)
+        if id > 0 then
+            RTS[id] = tar(x, y, z, id, IN(25), IB(i))
+        end
+    end
+    -- refresh radar data
+    local toRM = {}
+    for id, t in pairs(RTS) do
+        t.ttl = t.ttl - 1
+        if t.ttl < 0 then
+            table.insert(toRM, id)
+        end
+    end
+    for _, id in ipairs(toRM) do
+        RTS[id] = nil
+        if S_WP ~= nil and S_WP.id == id then
+            -- clear selected
+            S_WP = nil
+        end
+    end
+
     -- update map pos and zoom
-    MX, MY, ZOOM, X, Y = IN(3), IN(4), IN(5), IN(6), IN(7)
+    MX, MY, ZOOM, X, Y = IN(28), IN(29), IN(30), IN(31), IN(32)
 
     -- set clear btn visible or not
     CLR_BTN.v = #WPS > 0
     -- set focus btn visible or not
     FCS_BTN.v = S_WP ~= nil and not FCS_M
     -- set rm btn visible or not
-    RM_BTN.v = S_WP ~= nil
+    RM_BTN.v = S_WP ~= nil and S_WP.id == nil
 
-    if IB(1) then
+    if IB(7) then
         -- on touch
         local pressFlag = true
-        local tx, ty = IN(1), IN(2)
+        local tx, ty = IN(26), IN(27)
 
         -- press buttons
         for _, btn in ipairs(BTNS) do
             btn:press(tx, ty)
         end
 
-        if IB(2) then
+        if IB(8) then
             if ADDWP_BTN.pressed then
                 -- add waypoint if not duplicated
                 local i, _ = findWP(MX, MY)
                 if i == -1 then
-                    table.insert(WPS, waypoint(MX, MY))
+                    table.insert(WPS, tar(MX, 0, MY))
                 end
             elseif CLR_BTN.pressed then
                 -- clear all wps
@@ -158,7 +193,7 @@ function onTick()
                 FCS_M = true
             elseif RM_BTN.pressed then
                 -- rm selected wp
-                local i, _ = findWP(S_WP.x, S_WP.y)
+                local i, _ = findWP(S_WP.x, S_WP.z)
                 table.remove(WPS, i)
                 S_WP = nil
             else
@@ -189,7 +224,7 @@ function onTick()
         if not pressFlag then
             -- pass touch data to next script
             OB(1, true)  -- touch
-            OB(2, IB(2)) -- onTouch
+            OB(2, IB(8)) -- onTouch
             ON(1, tx)    -- tx
             ON(2, ty)    -- ty
         end
@@ -197,25 +232,21 @@ function onTick()
         for _, btn in ipairs(BTNS) do
             btn:clearPress()
         end
-        -- set touch data
-        OB(1, false) -- touch
-        OB(2, false) -- onTouch
-        ON(1, 0)     -- tx
-        ON(2, 0)     -- ty
     end
     ON(3, MX)
     ON(4, MY)
     ON(5, ZOOM)
 
     -- update focus mode
-    FCS_M = FCS_M and S_WP ~= nil and not IB(3)
+    FCS_M = FCS_M and S_WP ~= nil and not IB(9)
     OB(3, FCS_M)
     if FCS_M then
         -- focus mode
-        -- target x,y,z
-        ON(6, S_WP.x)
-        ON(7, 0)
+        -- target id,x,y,z
+        ON(6, S_WP.id or 0)
+        ON(7, S_WP.x)
         ON(8, S_WP.y)
+        ON(9, S_WP.z)
     end
 end
 
@@ -224,13 +255,18 @@ function onDraw()
     SC(UC2)
     local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, X, Y)
     for _, wp in ipairs(WPS) do
-        local x, y = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.y)
+        local x, y = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
         DL(sx, sy, x, y)
         sx, sy = x, y
     end
     -- draw waypoints
     for _, wp in ipairs(WPS) do
         wp:draw()
+    end
+
+    -- draw radar targets
+    for _, t in pairs(RTS) do
+        t:draw()
     end
 
     -- draw buttons

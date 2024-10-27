@@ -74,6 +74,6 @@ function onTick()
                 OB(i, IFF_MAPPING[id] ~= nil)
             end
         end
-        ON(25, IN(25))
+        ON(25, IN(27))
     end
 end
