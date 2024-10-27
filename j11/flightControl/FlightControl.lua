@@ -110,6 +110,16 @@ function onTick()
                 local roll, pitch, yaw = IN(9), IN(10), IN(11)
                 local altTarget, speedTarget, yawTarget = IN(12), IN(13) / 3.6, IN(14) / 180 * m.pi
                 local curRollAS, curPitchAs, curYawAs = IN(15), IN(16), IN(17)
+                if IB(5) then
+                    -- fly to next waypoint
+                    local wpx, wpz = IN(19), IN(20)
+                    -- double check
+                    if wpx ~= 0 or wpz ~= 0 then
+                        -- calculate yawTarget
+                        local selfX, selfZ = IN(21), IN(22)
+                        yawTarget = m.atan(wpx - selfX, wpz - selfZ)
+                    end
+                end
                 if yawTarget > m.pi then
                     yawTarget = yawTarget - 2 * m.pi
                 end
@@ -127,7 +137,7 @@ function onTick()
                     -AP_MAX_ROLL_SPEED, AP_MAX_ROLL_SPEED)
                 local pitchSpeed = clamp(AP_MAX_PITCH_SPEED * (calRadDiff(pitchTarget, pitch) / m.pi * 5),
                     -AP_MAX_PITCH_SPEED, AP_MAX_PITCH_SPEED)
-                local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 3),
+                local yawSpeed = clamp(AP_MAX_YAW_SPEED * (yawDiff / m.pi * 2.5),
                     -AP_MAX_YAW_SPEED, AP_MAX_YAW_SPEED)
 
                 pitchSpeed, yawSpeed = convertWithRoll(pitchSpeed, yawSpeed, roll)
