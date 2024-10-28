@@ -4,7 +4,7 @@ g_savedata = {
 }
 
 DETACH_DISTANCE = 25 -- sub vehicle to main vehicle
-SEND_BATCH_SIZE = 6  -- send at most 6 vehicle data in one tick
+SEND_BATCH_SIZE = 4  -- send at most 4 vehicle data in one tick
 TARGET_DIAL_NAME = "[CR] targetId"
 TARGET_ID_PAD_NAME_FORMAT = "[CR] t%did"
 TARGET_POS_PAD_NAME_FORMAT = "[CR] t%d%s"
@@ -231,7 +231,7 @@ function onTick(game_ticks)
             return left.id < right.id
         end)
         -- update interval
-        REFRESH_INTERVAL = (#TARGET_LIST // 6) + 1
+        REFRESH_INTERVAL = (#TARGET_LIST // SEND_BATCH_SIZE) + 1
     end
     CURRENT_INTERVAL = CURRENT_INTERVAL + 1
 

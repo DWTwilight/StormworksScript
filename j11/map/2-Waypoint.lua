@@ -151,8 +151,8 @@ function onTick()
     ON(8, 0)     -- ty
 
     -- read radar data
-    for i = 1, 6 do
-        local id, x, y, z, ttl, f = IN(4 * i - 3), IN(4 * i - 2), IN(4 * i - 1), IN(4 * i), IN(25), IB(i)
+    for i = 1, 4 do
+        local id, x, y, z, ttl, f = IN(i), IN(3 * i + 3), IN(3 * i + 4), IN(3 * i + 5), IN(5), IB(i)
         if id > 0 then
             if RTS[id] ~= nil then
                 -- do update

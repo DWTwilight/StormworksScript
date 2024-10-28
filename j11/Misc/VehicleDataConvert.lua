@@ -45,7 +45,7 @@ function L2G(v, b)
 end
 
 function G2L(v, B)
-    PN = Mv(B, { v[1], v[3], v[2] })
+    local PN = Mv(B, { v[1], v[3], v[2] })
     return PN[1], PN[3], PN[2]
 end
 
