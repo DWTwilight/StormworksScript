@@ -111,7 +111,7 @@ function onTick()
                 ON(3 * i + 5, tz)
                 -- set local pos
                 if B == nil then
-                    B = Eular2RotMat({ IN(23), IN(24), IN(25) })
+                    B = Eular2RotMat({ IN(23), IN(25), IN(24) })
                 end
                 local lx, ly, lz = G2L({ tx - x, ty - y, tz - z }, B)
                 ON(3 * i + 18, lx)

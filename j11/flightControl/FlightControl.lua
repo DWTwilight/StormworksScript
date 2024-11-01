@@ -66,7 +66,7 @@ function onTick()
     -- controls
     local rollMInput, pitchMInput, yawMInput = IN(1), IN(2), IN(3)
     local manualControl = (abs(rollMInput) + abs(pitchMInput) + abs(yawMInput) > 0)
-    local manualThrottleControl = IB(3) or IB(4)
+    local manualThrottleControl = IB(3) or IB(4) or IB(6)
     local landed = IB(1)
     local ap = IB(2)
     local throttle = IN(18)

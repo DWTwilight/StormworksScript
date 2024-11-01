@@ -156,7 +156,7 @@ function setSelectedST()
 end
 
 function onTick()
-    if IB(1) then
+    if IB(5) then
         -- radar on
         local ttl = IN(5)
         for i = 1, 4 do
@@ -189,49 +189,50 @@ function onTick()
                 ST = nil
             end
         end
-
-        -- handle screen touch
-        if IB(2) then
-            local px, py = IN(6) * 3 + 1, IN(7) * 3 + 1
-            -- press buttons
-            for _, btn in IPR(BTNS) do
-                btn:p(px, py)
-            end
-
-            if ZIB.op then
-                ZOOM = m.min(MZOOM, ZOOM * 2)
-            elseif ZOB.op then
-                ZOOM = m.max(1, ZOOM / 2)
-            elseif not PF then
-                -- press radar targets
-                for _, t in PR(RTS) do
-                    if t:p(px, py) then
-                        if t.pd then
-                            if ST ~= nil then
-                                -- unpress the previous selected one
-                                ST.pd = false
-                            end
-                            ST = t
-                        else
-                            -- unpress
-                            ST = nil
-                        end
-                        break
-                    end
-                end
-            end
-            PF = true
-        else
-            for _, btn in IPR(BTNS) do
-                btn:clearPress()
-            end
-            PF = false
-        end
     else
         -- radar off
         RTS = {}
         ST = nil
     end
+
+    -- handle screen touch
+    if IB(6) then
+        local px, py = IN(6) * 3 + 1, IN(7) * 3 + 1
+        -- press buttons
+        for _, btn in IPR(BTNS) do
+            btn:p(px, py)
+        end
+
+        if ZIB.op then
+            ZOOM = m.min(MZOOM, ZOOM * 2)
+        elseif ZOB.op then
+            ZOOM = m.max(1, ZOOM / 2)
+        elseif not PF then
+            -- press radar targets
+            for _, t in PR(RTS) do
+                if t:p(px, py) then
+                    if t.pd then
+                        if ST ~= nil then
+                            -- unpress the previous selected one
+                            ST.pd = false
+                        end
+                        ST = t
+                    else
+                        -- unpress
+                        ST = nil
+                    end
+                    break
+                end
+            end
+        end
+        PF = true
+    else
+        for _, btn in IPR(BTNS) do
+            btn:clearPress()
+        end
+        PF = false
+    end
+
     setSelectedST()
 end
 
