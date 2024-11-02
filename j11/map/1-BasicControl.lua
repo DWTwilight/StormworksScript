@@ -36,7 +36,7 @@ function SC(c)
 end
 
 function PIR(x, y, rectX, rectY, rectW, rectH)
-    return x >= rectX and y > rectY and x < rectX + rectW and y <= rectY + rectH
+    return x >= rectX - 1 and y > rectY + 2 and x < rectX + rectW - 1 and y <= rectY + rectH + 2
 end
 
 function PushButton(x, y, w, h, text, color, pressColor, visible, tox, toy, df)
@@ -98,7 +98,6 @@ UC = H2RGB(PT("Basic Primary Color"))
 UC2 = H2RGB(PT("Basic Secondary Color"))
 SIC = H2RGB(PT("Self Icon Color"))
 SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
-DW, DH = PN("Display Width"), PN("Display Height")
 ZOOM_F = PN("Zoom Sensitivity")
 SMOOTH_F = PN("Smooth Factor")
 
@@ -131,10 +130,6 @@ function calZoom(z)
     return 49.9 * (z - 1) ^ 2 + 0.1
 end
 
-function transformTouchInput(tx, ty)
-    return tx * SCR_W / DW + (SCR_W / DW) // 3, ty * SCR_H / DH + (SCR_H / DH) // 3
-end
-
 RESET_DURATION = 0
 
 function onTick()
@@ -143,7 +138,7 @@ function onTick()
 
     -- handle touch input
     if IB(1) then
-        local tx, ty = transformTouchInput(IN(4), IN(5))
+        local tx, ty = IN(4), IN(5)
 
         for _, btn in ipairs(BTNS) do
             btn:press(tx, ty)
@@ -161,7 +156,7 @@ function onTick()
             FM = true
             RESET_BTN.v = false
             OB(3, true)
-            RESET_DURATION = 6
+            RESET_DURATION = 8
         else
             pressFlag = false
         end

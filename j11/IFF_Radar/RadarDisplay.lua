@@ -33,7 +33,7 @@ function SC(c)
 end
 
 function PIR(x, y, rectX, rectY, rectW, rectH)
-    return x >= rectX and y > rectY and x < rectX + rectW and y <= rectY + rectH
+    return x >= rectX - 1 and y > rectY + 2 and x < rectX + rectW - 1 and y <= rectY + rectH + 2
 end
 
 function PBTN(x, y, w, h, color, pc, tox, toy, df)
@@ -75,7 +75,7 @@ end
 
 function calSPos(x, y)
     local f = SCRW / 2000 / ZOOM
-    return SCRW / 2 + x * f, SCRW - y * f
+    return (SCRW / 2 + x * f) // 1, (SCRW - y * f) // 1
 end
 
 function tar(x, y, z, id, ttl, f)
@@ -197,7 +197,7 @@ function onTick()
 
     -- handle screen touch
     if IB(6) then
-        local px, py = IN(6) * 3 + 1, IN(7) * 3 + 1
+        local px, py = IN(6), IN(7)
         -- press buttons
         for _, btn in IPR(BTNS) do
             btn:p(px, py)
