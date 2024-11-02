@@ -296,13 +296,13 @@ function onTick()
     -- AP enabled(pulse):
     if IB(3) then
         APA = clamp(IN(4), 50, 19000) // 1
-        APS = clamp(IN(5) * 3.6, 300, 1500) // 1
+        APS = clamp(IN(5) * 3.6, 400, 1500) // 1
         APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
     end
 
     -- when AP mannual throttle control, change speed target
     if IB(7) and (IB(5) or IB(6)) then
-        APS = clamp(IN(5) * 3.6, 300, 1500) // 1
+        APS = clamp(IN(5) * 3.6, 400, 1500) // 1
     end
 
     -- Fly to waypoint
