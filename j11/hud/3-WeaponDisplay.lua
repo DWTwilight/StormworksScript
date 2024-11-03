@@ -1,7 +1,6 @@
 M = math
 TAN = M.tan
 AT = M.atan
-ABS = M.abs
 
 S = screen
 DL = S.drawLine
@@ -63,10 +62,8 @@ function RT(id, x, y, z, f, ttl)
             end
         end,
         canLock = function(t)
-            return t.z > 0 and ABS(AT(t.x, (t.z ^ 2 + t.y ^ 2) ^ 0.5)) < LA
-        end,
-        dist = function(t)
-            return (t.x ^ 2 + t.y ^ 2 + t.z ^ 2) ^ 0.5
+            local a = AT((t.x ^ 2 + t.y ^ 2) ^ 0.5, t.z)
+            return t.z > 0 and a < LA, a
         end
     }
 end
@@ -86,6 +83,7 @@ RTLC = H2RGB(PT("Rardar Target Lock Color"))
 L = SCR_W / 2 / TAN(FOV / 2)
 OX, OY = 0, 0
 RTS = {}
+LOCK_T = nil
 
 function onTick()
     OX, OY = IN(6) * LOF / 2, -IN(7) * LOF - COY
