@@ -163,6 +163,8 @@ function CDSTR(x, y, t)
     if abs(roll) > pi / 2 then
         x = x + 2
     end
+    x = x // 1
+    y = y // 1
     DST(x - #t * 2, y, t)
 end
 

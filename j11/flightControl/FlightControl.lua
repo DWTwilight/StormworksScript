@@ -19,6 +19,8 @@ AP_THROTTLE_SENSITIVITY = PN("AP Throttle Sensitivity")
 AP_THROTTLE_FACTOR = PN("AP Throttle Factor")
 AP_THROTTLE_PRECISION = PN("AP Throttle Precision")
 
+M_PITCH_TRIM_FACTOR = PN("Mannual Pitch Trim Factor")
+
 -- less -> more sensitive, likly to overshoot
 AP_PITCH_FACTOR = 2000
 AP_YAW_FACTOR = 0.5
@@ -98,6 +100,7 @@ function onTick()
             local speed, altitude = IN(7), IN(8)
             local factor = m.max(ALTITUDE_FACTOR, m.sqrt(altitude)) / ALTITUDE_FACTOR *
                 (SPEED_SQRT_FACTOR / m.max(m.abs(speed) ^ 0.5, SPEED_SQRT_FACTOR))
+            local curRollAS, curPitchAs, curYawAs = IN(15), IN(16), IN(17)
             if ap and not manualControl then
                 if not AP_FLAG then
                     -- reset AP controls
@@ -110,7 +113,6 @@ function onTick()
                 -- auto pilot on and not manual control
                 local roll, pitch, yaw = IN(9), IN(10), IN(11)
                 local altTarget, speedTarget, yawTarget = IN(12), IN(13) / 3.6, IN(14) / 180 * m.pi
-                local curRollAS, curPitchAs, curYawAs = IN(15), IN(16), IN(17)
                 if IB(5) then
                     -- fly to next waypoint
                     local wpx, wpz = IN(19), IN(20)
@@ -206,7 +208,15 @@ function onTick()
                 OB(5, IB(3))
                 OB(6, IB(4))
 
-                setOutputs(trim(rollMInput, rollTrim), trim(pitchMInput, pitchTrim), trim(yawMInput, yawTrim))
+                -- trim pitch when mannual control
+                if curPitchAs < TRIM_ZONE and pitchPid == 0 then
+                    pitchTrim = pitchTrim + pitchMInput * M_PITCH_TRIM_FACTOR
+                end
+
+                setOutputs(
+                    trim(rollMInput, rollTrim),
+                    trim(pitchMInput, clamp(pitchTrim + IN(23), -0.7, 0.7)),
+                    trim(yawMInput, yawTrim))
                 AP_FLAG = false
             end
         end
