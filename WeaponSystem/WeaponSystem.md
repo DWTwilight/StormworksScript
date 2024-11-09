@@ -8,12 +8,16 @@
 
 Major Types:
 
-| type    | value | short |
-| ------- | ----- | ----- |
-| Utility | 0     | U     |
-| Cannon  | 1     | C     |
-| Bomb    | 2     | B     |
-| Misslie | 3     | M     |
+| type                  | value | short |
+| --------------------- | ----- | ----- |
+| Utility               | 0     | U     |
+| Cannon                | 1     | C     |
+| Auto Cannon           | 2     | C     |
+| Unguided Bomb         | 3     | B     |
+| Guided Bomb           | 4     | B     |
+| Anti Aircraft Misslie | 5     | M     |
+| Anti Surface Misslie  | 6     | M     |
+| Rocket                | 7     | R     |
 
 
 Subtypes:
@@ -55,13 +59,82 @@ Subtypes:
 | radar select | 1     |
 | map select   | 2     |
 | EOTS lock    | 3     |
+| TV Guide     | 4     |
 
-#### Format 
+#### status
 
-| field        | bits |
-| ------------ | ---- |
-| id           | 7    |
-| range        | 8    |
-| guide method | 4    |
-| sub type     | 2    |
-| major type   | 2    |
+| status | value           |
+| ------ | --------------- |
+| 0      | require target  |
+| 1      | ready           |
+| 2      | lauching        |
+| 3      | ready to detach |
+
+
+#### Metadata Format 
+
+number 1
+
+| field                | bits |
+| -------------------- | ---- |
+| default guide method | 3    |
+| guide methods        | 8    |
+| type                 | 4    |
+| wid                  | 8    |
+
+number 2
+
+| field      | bits |
+| ---------- | ---- |
+| reserved   | 9    |
+| status     | 2    |
+| ammo count | 12   |
+
+bool
+| channel | value           |
+| ------- | --------------- |
+| 1       | lauching        |
+| 2       | ready to detach |
+
+### Weapon Control Data
+
+Numbers
+
+| channel  | value                |
+| -------- | -------------------- |
+| 1        | weapon id on vehicle |
+| 2        | target id            |
+| 3,4,5    | target global pos    |
+| 6,7,8    | target global speed  |
+| 9,10,11  | target local pos     |
+| 12,13,14 | target local speed   |
+
+### Weapon Select & Display 
+
+#### input format 
+
+number 
+| channel | value                 |
+| ------- | --------------------- |
+| 2N-1    | weapon metadata num1  |
+| 2N      | weapon metadata num 2 |
+
+#### output format 
+
+number 
+| channel | value               |
+| ------- | ------------------- |
+| 1       | selected weapon vid |
+| 2       | select guide method |
+
+bool 
+| channel | value            |
+| ------- | ---------------- |
+| 1-N     | lauch signal 1-N |
+
+
+### Weapon IDS
+
+| id  | name     |
+| --- | -------- |
+| 1   | GSH-30-1 |
