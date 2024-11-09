@@ -3,6 +3,7 @@ M = math
 S = screen
 DT = S.drawText
 DRF = S.drawRectF
+DL = S.drawLine
 
 IN = input.getNumber
 IB = input.getBool
@@ -135,11 +136,11 @@ INDEX = 0                 -- current weapon index, 0 for overview
 GUIDE = 0                 -- current select guide method
 
 -- btns
-RELEASE_BTN = PBTN(62, 2, 32, 7, "RELEASE", DC, DC2, 1, 1)
+RELEASE_BTN = PBTN(60, 1, 36, 7, "RELEASE", DC, DC2, 1, 1)
 -- guide method tab group
 GUIDE_BTN_GROUP = {
-    x = 4,
-    y = 50,
+    x = 6,
+    y = 31,
     w = 17,
     h = 7,
     gm = {},
@@ -296,24 +297,24 @@ function onDraw()
         local wg = WEAPON_GROUPS[INDEX]
         SC(UC2)
         DT(2, 2, wg.wt)
-        DT(11, 7, "Type:")
-        DT(35, 7, TT[wg.type + 1])
-        DT(11, 14, "STAT:")
-        DT(6, 21, "Guide:")
+        DT(2, 9, TT[wg.type + 1])
+        DL(0, 15, 96, 15)
+        DT(2, 17, "STAT:")
+        DT(2, 24, "Guide:")
 
         -- draw ammo
         local ammo, w = wg:info()
         -- ammo text
         local at = string.format("%d/%d", ammo, wg.ammo)
         SC(ammo == 0 and DC or UC2)
-        DT(94 - #at * 5, 83, at)
+        DT(4, 89, at)
 
         -- draw status
         SC((ammo == 0 or w == nil or w.status == 0) and DC or UC2)
         if ammo == 0 or w == nil then
-            DT(35, 14, "EMPTY")
+            DT(30, 17, "EMPTY")
         else
-            DT(35, 14, STT[w.status + 1])
+            DT(30, 17, STT[w.status + 1])
         end
 
         -- draw guide btn group
