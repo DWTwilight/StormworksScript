@@ -129,7 +129,7 @@ function SC(c)
 end
 
 function PIR(x, y, rectX, rectY, rectW, rectH)
-    return x >= rectX and y > rectY and x < rectX + rectW and y <= rectY + rectH
+    return x >= rectX and y >= rectY and x < rectX + rectW and y < rectY + rectH
 end
 
 function ToggleButton(x, y, w, h, text, color, toggleColor, toggled)

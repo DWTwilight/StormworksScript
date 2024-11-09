@@ -36,7 +36,7 @@ function SC(c)
 end
 
 function PIR(x, y, rectX, rectY, rectW, rectH)
-    return x >= rectX - 1 and y > rectY + 2 and x < rectX + rectW - 1 and y <= rectY + rectH + 2
+    return x >= rectX and y >= rectY and x < rectX + rectW and y < rectY + rectH
 end
 
 function PushButton(x, y, w, h, text, color, pressColor, visible, tox, toy, df)
