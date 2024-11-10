@@ -37,6 +37,17 @@ function setOutputs(roll, pitch, yaw)
     ON(1, roll)
     ON(2, pitch)
     ON(3, yaw)
+    ON(10, yaw)
+    ON(4, 0.15 * (pitch - roll))
+    ON(5, 0.15 * (pitch + roll))
+end
+
+function setAirbreak(roll)
+    local pitch = -1
+    ON(1, roll)
+    ON(2, pitch)
+    ON(3, 1)
+    ON(10, -1)
     ON(4, 0.15 * (pitch - roll))
     ON(5, 0.15 * (pitch + roll))
 end
@@ -67,13 +78,18 @@ end
 function onTick()
     -- controls
     local rollMInput, pitchMInput, yawMInput = IN(1), IN(2), IN(3)
-    local manualControl = (abs(rollMInput) + abs(pitchMInput) + abs(yawMInput) > 0)
+    local airbreak = IB(7)
+    local manualControl = (abs(rollMInput) + abs(pitchMInput) + abs(yawMInput) > 0) or airbreak
     local manualThrottleControl = IB(3) or IB(4) or IB(6)
     local landed = IB(1)
     local ap = IB(2)
     local throttle = IN(18)
     if landed then
-        setOutputs(rollMInput, pitchMInput, yawMInput)
+        if airbreak then
+            setAirbreak(rollMInput)
+        else
+            setOutputs(rollMInput, pitchMInput, yawMInput)
+        end
 
         -- whether activate trim pid
         OB(1, false)
@@ -196,9 +212,9 @@ function onTick()
                 yawTrim = clamp(yawTrim + yawPid * factor, -0.1, 0.1)
 
                 -- whether activate trim pid
-                OB(1, abs(rollMInput) < TRIM_ZONE)
-                OB(2, abs(pitchMInput) < TRIM_ZONE)
-                OB(3, abs(yawMInput) < TRIM_ZONE)
+                OB(1, abs(rollMInput) < TRIM_ZONE and not airbreak)
+                OB(2, abs(pitchMInput) < TRIM_ZONE and not airbreak)
+                OB(3, abs(yawMInput) < TRIM_ZONE and not airbreak)
                 -- pid targets
                 ON(6, 0)
                 ON(7, 0)
@@ -213,10 +229,14 @@ function onTick()
                     pitchTrim = pitchTrim + pitchMInput * M_PITCH_TRIM_FACTOR
                 end
 
-                setOutputs(
-                    trim(rollMInput, rollTrim),
-                    trim(pitchMInput, clamp(pitchTrim + IN(23), -0.7, 0.7)),
-                    trim(yawMInput, yawTrim))
+                if airbreak then
+                    setAirbreak(trim(rollMInput, rollTrim))
+                else
+                    setOutputs(
+                        trim(rollMInput, rollTrim),
+                        trim(pitchMInput, pitchTrim),
+                        trim(yawMInput, yawTrim))
+                end
                 AP_FLAG = false
             end
         end

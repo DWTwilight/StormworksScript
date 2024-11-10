@@ -100,14 +100,19 @@ bool
 
 Numbers
 
-| channel  | value                |
-| -------- | -------------------- |
-| 1        | weapon id on vehicle |
-| 2        | target id            |
-| 3,4,5    | target global pos    |
-| 6,7,8    | target global speed  |
-| 9,10,11  | target local pos     |
-| 12,13,14 | target local speed   |
+| channel | value                                            |
+| ------- | ------------------------------------------------ |
+| 1       | weapon id on vehicle, 0 if no weapon is selected |
+| 2       | guide method, 0-7, -1 if disabled                |
+| 3       | target id                                        |
+| 4       | target global pos x (For GPS Target)             |
+| 5       | target global pos z (For GPS Target)             |
+
+Bool
+
+| channel | value   |
+| ------- | ------- |
+| 1       | Trigger |
 
 ### Weapon Select & Display 
 
