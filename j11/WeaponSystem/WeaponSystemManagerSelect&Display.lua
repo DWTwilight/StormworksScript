@@ -87,7 +87,7 @@ function WeaponGroup(wid, type, guideMethods, defaultGuideMethod)
         wt = PT(string.format("WN_%d", wid)),
         type = type,
         gm = guideMethods,
-        dgm = defaultGuideMethod,
+        dgm = #guideMethods == 0 and -1 or defaultGuideMethod,
         ammo = 0, -- total value, will not change after init
         ws = {},
         upsertW = function(wg, vid, ammo, status)
