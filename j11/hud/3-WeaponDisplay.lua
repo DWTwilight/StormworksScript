@@ -47,7 +47,7 @@ function RT(id, x, y, z, f, ttl)
         ttl = ttl,
         ttlF = ttl, -- for calculation
         pos = { x, y, z },
-        locked = false,
+        lockF = 0,
         speedL = nil, -- local speed per tick, appose to player
         update = function(t, x, y, z, ttl, f)
             -- update speed
@@ -73,14 +73,36 @@ function RT(id, x, y, z, f, ttl)
             -- check if in front
             local x, y, z = t:curPos(DELAY_C)
             if z > 0 then
-                SC(t.locked and RTLC or RTC)
-                local sx, sy = SCR_W / 2 + AT(x, z) * L - HRTW - 1, SCR_W / 2 + AT(y, z) * -L - HRTW - 1
+                local sx, sy =
+                    SCR_W / 2 + AT(x, z) * L - HRTW - 1,
+                    SCR_W / 2 + AT(y, z) * -L - HRTW - 1
+                if t.lockF == 0 then
+                    -- not locked
+                    SC(RTC)
+                elseif t.lockF == 1 then
+                    -- locking
+                    SC(LOCKB and RTLC or RTC)
+                else
+                    -- locked
+                    SC(RTLC)
+                    -- draw lock line
+                    CDL(SCR_W / 2, SCR_W / 2, sx + HRTW, sy + HRTW)
+                end
+
                 CDR(sx, sy, RTW + 1, RTW + 1)
                 if t.f then
                     CDL(sx, sy, sx + RTW + 1, sy + RTW + 1)
                     CDL(sx + RTW + 1, sy, sx, sy + RTW + 1)
                 end
             end
+        end,
+        canLock = function(t)
+            local x, y, z = t:curPos(DELAY_C)
+            if z > 0 and (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 <= RANGE * 1000 then
+                local a = AT((x ^ 2 + y ^ 2) ^ 0.5, z)
+                return a < t.lockF == 2 and LA * 4 or LA, a
+            end
+            return false, 0
         end
     }
 end
@@ -103,6 +125,8 @@ L = SCR_W / 2 / TAN(FOV / 2)
 OX, OY = 0, 0
 RTS = {}
 LOCK_T = nil
+RANGE = 0
+LOCKB = false
 
 function onTick()
     OX, OY = IN(6) * LOF / 2, -IN(7) * LOF - COY
@@ -133,6 +157,65 @@ function onTick()
     for _, id in IPR(toRM) do
         RTS[id] = nil
     end
+
+    if IN(9) == 0 then
+        -- enable hud lock
+        LOCKB = IB(6)
+        -- set range
+        RANGE = IN(8) == 1 and 4 or 200
+
+        -- update current lock status
+        if LOCK_T ~= nil and LOCK_T.lockF == 2 then
+            -- have a locked target
+            local canLock, _ = LOCK_T:canLock()
+            if IB(5) or not canLock then
+                -- cancel lock
+                LOCK_T.lockF = 0
+                LOCK_T = nil
+            end
+        else
+            -- update current lockable target
+            local minA = LA
+            local lockableTarget = nil
+            for _, t in pairs(RTS) do
+                local canLock, a = t:canLock()
+                if canLock and a < minA then
+                    lockableTarget = t
+                    minA = a
+                end
+            end
+            if lockableTarget ~= nil then
+                -- replace lockT
+                if LOCK_T ~= nil and LOCK_T.id ~= lockableTarget.id then
+                    LOCK_T.lockF = 0
+                end
+                LOCK_T = lockableTarget
+                LOCK_T.lockF = 1
+            elseif LOCK_T ~= nil then
+                -- cancel locking
+                LOCK_T.lockF = 0
+                LOCK_T = nil
+            end
+
+            -- handle lock pulse
+            if LOCK_T ~= nil and IB(5) then
+                LOCK_T.lockF = 2
+            end
+        end
+    else
+        if LOCK_T ~= nil then
+            -- cancel locking
+            LOCK_T.lockF = 0
+            LOCK_T = nil
+        end
+    end
+    if LOCK_T == nil then
+        ON(1, 0)
+        ON(2, 0)
+    else
+        ON(1, LOCK_T.id)
+        ON(2, LOCK_T.lockF)
+    end
 end
 
 function onDraw()
@@ -144,8 +227,13 @@ function onDraw()
     CDL(w, h - 2, w, h)
     CDL(w, h + 1, w, h + 3)
 
-    -- draw radar targets
-    for _, t in PR(RTS) do
-        t:draw()
+    if LOCK_T ~= nil and LOCK_T.lockF == 2 then
+        -- only draw locked target
+        LOCK_T:draw()
+    else
+        -- draw radar targets
+        for _, t in PR(RTS) do
+            t:draw()
+        end
     end
 end
