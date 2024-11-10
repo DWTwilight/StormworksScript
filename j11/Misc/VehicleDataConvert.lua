@@ -39,12 +39,7 @@ function tM(M)
     return N
 end
 
-function L2G(v, b)
-    local PN = Mv(b, { v[1], v[3], v[2] })
-    return PN[1], PN[3], PN[2]
-end
-
-function G2L(v, B)
+function EularRotate(v, B)
     local PN = Mv(B, { v[1], v[3], v[2] })
     return PN[1], PN[3], PN[2]
 end
@@ -79,11 +74,11 @@ function onTick()
     local B = Eular2RotMat({ IN(4), IN(6), IN(5) })
     local b = tM(B)
 
-    local lax, lay, laz = G2L({ IN(10), IN(11), IN(12) }, B)
+    local lax, lay, laz = EularRotate({ IN(10), IN(11), IN(12) }, B)
 
     local pitch = IN(15) * pi2
     local yaw = -IN(17) * pi2
-    local x, y, z = L2G({ 0, 1, 0 }, b)
+    local x, y, z = EularRotate({ 0, 1, 0 }, b)
     local ux, uy, uz = -sin(pitch) * sin(yaw), cos(pitch), -sin(pitch) * cos(yaw)
     local roll = calculateAngle({
         x = x,
@@ -94,7 +89,7 @@ function onTick()
         y = uy,
         z = uz
     })
-    x, y, z = L2G({ 1, 0, 0 }, b)
+    x, y, z = EularRotate({ 1, 0, 0 }, b)
     if y > 0 then
         roll = -roll
     end
@@ -102,15 +97,21 @@ function onTick()
     -- cal distance to ground
     local dtgSensor, dtg = IN(21), 500
     if dtgSensor < 500 then
-        x, y, z = L2G({ 0, -dtgSensor, 0 }, b)
+        x, y, z = EularRotate({ 0, -dtgSensor, 0 }, b)
         dtg = -y
     end
 
-    -- cal windSpeed
-    local windSpeed, windDirection = IN(22), IN(23) * pi2
-    local windSpeedX, windSpeedZ =
-        windSpeed * cos(windDirection),
-        windSpeed * sin(windDirection)
+    -- cal local airSpeed
+    local airSpeed, airSpeedDirection = IN(22), IN(23) * pi2
+    local airSpeedZ, airSpeedX =
+        airSpeed * cos(airSpeedDirection),
+        airSpeed * sin(airSpeedDirection)
+
+    -- cal absolute windSpeed
+    local airSpeedY = IN(27) * sin(IN(28) * pi2)
+    local windSpeedX, windSpeedY, windSpeedZ = IN(7) - airSpeedX, IN(8) - airSpeedY, IN(9) - airSpeedZ
+    local globalWindSpeedX, _, globalWindSpeedZ =
+        EularRotate({ windSpeedX, windSpeedY, windSpeedZ }, b)
 
     ON(1, IN(1))
     ON(2, IN(2))
@@ -133,9 +134,11 @@ function onTick()
     ON(19, IN(19))
     ON(20, IN(20))
     ON(21, dtg)
-    ON(22, windSpeedX)
-    ON(23, windSpeedZ)
+    ON(22, airSpeedZ)
+    ON(23, airSpeedX)
     ON(24, IN(24))
     ON(25, IN(26))
+    ON(26, globalWindSpeedX)
+    ON(27, globalWindSpeedZ)
     ON(32, IN(25))
 end

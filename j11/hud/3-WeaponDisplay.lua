@@ -1,10 +1,12 @@
 M = math
 TAN = M.tan
 AT = M.atan
+SIN = M.sin
 
 S = screen
 DL = S.drawLine
 DR = S.drawRect
+DC = S.drawCircle
 
 IN = input.getNumber
 IB = input.getBool
@@ -38,6 +40,10 @@ end
 
 function CDR(x, y, w, h)
     DR((x + OX) // 1, (y + OY) // 1, w, h)
+end
+
+function CDC(x, y, r)
+    DC((x + OX) // 1, (y + OY) // 1, r)
 end
 
 function RT(id, x, y, z, f, ttl)
@@ -74,8 +80,8 @@ function RT(id, x, y, z, f, ttl)
             local x, y, z = t:curPos(DELAY_C)
             if z > 0 then
                 local sx, sy =
-                    SCR_W / 2 + AT(x, z) * L - HRTW - 1,
-                    SCR_W / 2 + AT(y, z) * -L - HRTW - 1
+                    SCR_W / 2 + (x / z) * L - HRTW - 1,
+                    SCR_W / 2 + (y / z) * -L - HRTW - 1
                 if t.lockF == 0 then
                     -- not locked
                     SC(RTC)
@@ -85,8 +91,15 @@ function RT(id, x, y, z, f, ttl)
                 else
                     -- locked
                     SC(RTLC)
-                    -- draw lock line
-                    CDL(SCR_W / 2, SCR_W / 2, sx + HRTW, sy + HRTW)
+                    if BC_REACHABLE then
+                        -- draw shoot circle
+                        local ox, oy = SCR_W / 2 + L * TAN(BC_OFFSET_YAW), SCR_W / 2 + -L * TAN(BC_OFFSET_PITCH)
+                        CDL(ox, oy, sx + HRTW, sy + HRTW)
+                        CDC(ox, oy, 3)
+                    else
+                        -- draw lock line
+                        CDL(SCR_W / 2, SCR_W / 2, sx + HRTW, sy + HRTW)
+                    end
                 end
 
                 CDR(sx, sy, RTW + 1, RTW + 1)
@@ -107,7 +120,7 @@ function RT(id, x, y, z, f, ttl)
     }
 end
 
--- TPS = PN("Tick per Sec")
+TPS = PN("Tick per Sec")
 DELAY_C = PN("Delay Compensate(ticks)")
 SCR_W = PN("Screen Width")
 LOF = PN("Look Offset Factor")
@@ -128,9 +141,15 @@ LOCK_T = nil
 RANGE = 0
 LOCKB = false
 
-function onTick()
-    OX, OY = IN(6) * LOF / 2, -IN(7) * LOF - COY
+BC_REACHABLE = false
+BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
 
+function onTick()
+    BC_REACHABLE = false
+    BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
+
+    OX, OY = IN(6) * LOF / 2, -IN(7) * LOF - COY
+    local curVid = IN(8)
     -- get radar data
     local ttl = IN(5)
     for i = 1, 4 do
@@ -162,7 +181,7 @@ function onTick()
         -- enable hud lock
         LOCKB = IB(6)
         -- set range
-        RANGE = IN(8) == 1 and 4 or 200
+        RANGE = curVid == 1 and 4 or 200
 
         -- update current lock status
         if LOCK_T ~= nil and LOCK_T.lockF == 2 then
@@ -215,6 +234,33 @@ function onTick()
     else
         ON(1, LOCK_T.id)
         ON(2, LOCK_T.lockF)
+        ON(18, curVid)
+        if curVid == 1 then
+            -- get bc data
+            BC_REACHABLE = IB(4)
+            BC_OFFSET_YAW, BC_OFFSET_PITCH = IN(13), IN(14)
+
+            -- set data for ballistic calculation
+            OB(1, IB(3)) -- calculation pulse
+            local selfVX, selfVY, selfVZ = IN(10), IN(11), IN(12)
+            ON(3, selfVX)
+            ON(4, selfVY)
+            ON(5, selfVZ)
+            local x, y, z = LOCK_T:curPos(DELAY_C)
+            ON(6, x)
+            ON(7, y)
+            ON(8, z)
+            local tlvx, tlvy, tlvz = 0, 0, 0
+            if LOCK_T.speedL ~= nil then
+                tlvx, tlvy, tlvz =
+                    LOCK_T.speedL[1] * TPS,
+                    LOCK_T.speedL[2] * TPS,
+                    LOCK_T.speedL[3] * TPS
+            end
+            ON(9, tlvx + selfVX)
+            ON(10, tlvy + selfVY)
+            ON(11, tlvz + selfVZ)
+        end
     end
 end
 
