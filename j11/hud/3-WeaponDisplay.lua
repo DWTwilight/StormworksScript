@@ -43,31 +43,50 @@ end
 function RT(id, x, y, z, f, ttl)
     return {
         id = id,
-        x = x,
-        y = y,
-        z = z,
         f = f,
         ttl = ttl,
+        ttlF = ttl, -- for calculation
+        pos = { x, y, z },
         locked = false,
+        speedL = nil, -- local speed per tick, appose to player
+        update = function(t, x, y, z, ttl, f)
+            -- update speed
+            t.speedL = {
+                (x - t.pos[1]) / t.ttlF,
+                (y - t.pos[2]) / t.ttlF,
+                (z - t.pos[3]) / t.ttlF }
+            t.pos = { x, y, z }
+            t.ttl = ttl
+            t.ttlF = ttl
+            t.f = f
+        end,
+        curPos = function(t, tickOffset)
+            if t.speedL == nil then
+                return t.pos[1], t.pos[2], t.pos[3]
+            end
+            local totalTickOffset = tickOffset + t.ttlF - t.ttl
+            return t.pos[1] + t.speedL[1] * totalTickOffset,
+                t.pos[2] + t.speedL[2] * totalTickOffset,
+                t.pos[3] + t.speedL[3] * totalTickOffset
+        end,
         draw = function(t)
             -- check if in front
-            if t.z > 0 then
+            local x, y, z = t:curPos(DELAY_C)
+            if z > 0 then
                 SC(t.locked and RTLC or RTC)
-                local sx, sy = SCR_W / 2 + AT(t.x, t.z) * L - HRTW - 1, SCR_W / 2 + AT(t.y, t.z) * -L - HRTW - 1
+                local sx, sy = SCR_W / 2 + AT(x, z) * L - HRTW - 1, SCR_W / 2 + AT(y, z) * -L - HRTW - 1
                 CDR(sx, sy, RTW + 1, RTW + 1)
                 if t.f then
                     CDL(sx, sy, sx + RTW + 1, sy + RTW + 1)
                     CDL(sx + RTW + 1, sy, sx, sy + RTW + 1)
                 end
             end
-        end,
-        canLock = function(t)
-            local a = AT((t.x ^ 2 + t.y ^ 2) ^ 0.5, t.z)
-            return t.z > 0 and a < LA, a
         end
     }
 end
 
+-- TPS = PN("Tick per Sec")
+DELAY_C = PN("Delay Compensate(ticks)")
 SCR_W = PN("Screen Width")
 LOF = PN("Look Offset Factor")
 COY = PN("Crosshair Offset Y")
@@ -96,8 +115,7 @@ function onTick()
         if id ~= 0 then
             if RTS[id] ~= nil then
                 -- do update
-                local t = RTS[id]
-                t.x, t.y, t.z, t.ttl, t.f = x, y, z, ttl, f
+                RTS[id]:update(x, y, z, ttl, f)
             else
                 -- insert new target
                 RTS[id] = RT(id, x, y, z, f, ttl)
