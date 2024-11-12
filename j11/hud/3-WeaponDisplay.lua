@@ -120,7 +120,6 @@ function RT(id, x, y, z, f, ttl)
     }
 end
 
-TPS = PN("Tick per Sec")
 DELAY_C = PN("Delay Compensate(ticks)")
 SCR_W = PN("Screen Width")
 LOF = PN("Look Offset Factor")
@@ -237,29 +236,8 @@ function onTick()
         ON(18, curVid)
         if curVid == 1 then
             -- get bc data
-            BC_REACHABLE = IB(4)
+            BC_REACHABLE = IB(7)
             BC_OFFSET_YAW, BC_OFFSET_PITCH = IN(13), IN(14)
-
-            -- set data for ballistic calculation
-            OB(1, IB(3)) -- calculation pulse
-            local selfVX, selfVY, selfVZ = IN(10), IN(11), IN(12)
-            ON(3, selfVX)
-            ON(4, selfVY)
-            ON(5, selfVZ)
-            local x, y, z = LOCK_T:curPos(DELAY_C)
-            ON(6, x)
-            ON(7, y)
-            ON(8, z)
-            local tlvx, tlvy, tlvz = 0, 0, 0
-            if LOCK_T.speedL ~= nil then
-                tlvx, tlvy, tlvz =
-                    LOCK_T.speedL[1] * TPS,
-                    LOCK_T.speedL[2] * TPS,
-                    LOCK_T.speedL[3] * TPS
-            end
-            ON(9, tlvx + selfVX)
-            ON(10, tlvy + selfVY)
-            ON(11, tlvz + selfVZ)
         end
     end
 end

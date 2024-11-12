@@ -94,14 +94,12 @@ function onTick()
         -- locked and use GSH-30-1
         if IB(1) then
             -- update calculation
-            local B = Eular2RotMat({ IN(15), IN(17), IN(16) })
-            local tB = tM(B)
-            local yaw = IN(14)
+            local yaw = IN(12)
 
-            local selfVX, selfVY, selfVZ = convertLocalToRelativeValues(IN(3), IN(4), IN(5), yaw, tB)
-            local targetX, targetY, targetZ = convertLocalToRelativeValues(IN(6), IN(7), IN(8), yaw, tB)
-            local targetVx, targetVy, targetVz = convertLocalToRelativeValues(IN(9), IN(10), IN(11), yaw, tB)
-            local windSpeedX, windSpeedZ = convertGlobalXZToRelative(IN(12), IN(13), yaw)
+            local selfVX, selfVY, selfVZ = IN(1), IN(2), IN(3)
+            local targetX, targetY, targetZ = IN(4), IN(5), IN(6)
+            local targetVx, targetVy, targetVz = IN(7), IN(8), IN(9)
+            local windSpeedX, windSpeedZ = IN(10), IN(11)
 
             -- cal target offset
             local ngeTick = 0

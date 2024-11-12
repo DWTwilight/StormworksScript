@@ -8,6 +8,7 @@ ac = m.acos
 at = m.atan
 IN = input.getNumber
 ON = output.setNumber
+PN = property.getNumber
 
 function Eular2RotMat(E)
     local qx, qy, qz = E[1], E[2], E[3]
@@ -70,6 +71,13 @@ function calculateAngle(v1, v2)
     return angle
 end
 
+function lerp(target, value, gain)
+    return value + (target - value) * gain
+end
+
+WIND_SPEED_SMOOTH_FACTOR = PN("Wind Speed Smooth Factor")
+GLOBAL_WIND_SPEEDX, GLOBAL_WIND_SPEEDZ = 0, 0
+
 function onTick()
     local B = Eular2RotMat({ IN(4), IN(6), IN(5) })
     local b = tM(B)
@@ -110,8 +118,9 @@ function onTick()
     -- cal absolute windSpeed
     local airSpeedY = IN(27) * sin(IN(28) * pi2)
     local windSpeedX, windSpeedY, windSpeedZ = IN(7) - airSpeedX, IN(8) - airSpeedY, IN(9) - airSpeedZ
-    local globalWindSpeedX, _, globalWindSpeedZ =
-        EularRotate({ windSpeedX, windSpeedY, windSpeedZ }, b)
+    local curWindSpeedX, _, curWindSpeedZ = EularRotate({ windSpeedX, windSpeedY, windSpeedZ }, b)
+    GLOBAL_WIND_SPEEDX = lerp(curWindSpeedX, GLOBAL_WIND_SPEEDX, WIND_SPEED_SMOOTH_FACTOR)
+    GLOBAL_WIND_SPEEDZ = lerp(curWindSpeedZ, GLOBAL_WIND_SPEEDZ, WIND_SPEED_SMOOTH_FACTOR)
 
     ON(1, IN(1))
     ON(2, IN(2))
@@ -138,7 +147,7 @@ function onTick()
     ON(23, airSpeedX)
     ON(24, IN(24))
     ON(25, IN(26))
-    ON(26, globalWindSpeedX)
-    ON(27, globalWindSpeedZ)
+    ON(26, GLOBAL_WIND_SPEEDX)
+    ON(27, GLOBAL_WIND_SPEEDZ)
     ON(32, IN(25))
 end
