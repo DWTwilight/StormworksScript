@@ -51,8 +51,8 @@ VID = 0
 GUIDE_METHOD = -1
 
 function onTick()
-    GUIDE_METHOD = IN(18)
-    VID = IN(19)
+    GUIDE_METHOD = IN(19)
+    VID = IN(18)
 
     ON(1, VID) -- weapon vid
     ON(2, GUIDE_METHOD)

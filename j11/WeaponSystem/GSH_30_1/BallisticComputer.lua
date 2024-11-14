@@ -84,7 +84,7 @@ function calculateTargetPosition(selfX, selfY, selfZ,
     local st = SELF_DELAY_COMPENSATION / TICK_PER_SEC
     selfX, selfY, selfZ = selfX + st * selfVX, selfY + st * selfVY, selfZ + st * selfVZ
 
-    local t = tick / TICK_PER_SEC + TARGET_DELAY_COMPENSATION
+    local t = (tick + TARGET_DELAY_COMPENSATION) / TICK_PER_SEC
     return targetX - selfX + targetVx * t,
         targetY - selfY + targetVy * t,
         targetZ - selfZ + targetVz * t
