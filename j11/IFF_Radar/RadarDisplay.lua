@@ -1,4 +1,6 @@
 m = math
+atan = m.atan
+rad = m.rad
 
 S = screen
 DRF = S.drawRectF
@@ -73,9 +75,17 @@ function PBTN(x, y, w, h, color, pc, tox, toy, df)
     }
 end
 
-function calSPos(x, y)
-    local f = SCRW / 2000 / ZOOM
-    return (SCRW / 2 + x * f) // 1, (SCRW - y * f) // 1
+function calSPos(x, y, z)
+    if z < 0 then
+        return -SCRW, -SCRW
+    end
+    if MODE then
+        local f = SCRW / 2000 / ZOOM
+        return (SCRW / 2 + x * f) // 1, (SCRW - z * f) // 1
+    else
+        local oxa, oya = atan(x, z), atan(y, z)
+        return oxa / FOV_RAD * SCRW + SCRW / 2, -oya / FOV_RAD * SCRW + SCRW / 2
+    end
 end
 
 function tar(x, y, z, id, ttl, f)
@@ -88,7 +98,7 @@ function tar(x, y, z, id, ttl, f)
         f = f,
         pd = false,
         p = function(t, tx, ty)
-            local sx, sy = calSPos(t.x, t.z)
+            local sx, sy = calSPos(t.x, t.y, t.z)
             if PIR(tx, ty, sx - HTW - 1, sy - HTW - 1, TW + 2, TW + 2) then
                 t.pd = not t.pd
                 return true
@@ -97,7 +107,7 @@ function tar(x, y, z, id, ttl, f)
         end,
         draw = function(t)
             -- get screen pos
-            local sx, sy = calSPos(t.x, t.z)
+            local sx, sy = calSPos(t.x, t.y, t.z)
             if t.pd then
                 SC(UC2)
                 DRF(sx - HTW - 1, sy - HTW - 1, TW + 2, TW + 2)
@@ -119,6 +129,10 @@ function DZO(x, y)
     DL(x, y + 2, x + 5, y + 2)
 end
 
+function DM(x, y)
+    DT(x, y, "M")
+end
+
 SCRW = PN("Screen Width")
 ZOOM = PN("Iniital Zoom")
 MZOOM = PN("Max Zoom")
@@ -127,11 +141,15 @@ UC2 = H2RGB(PT("Basic Secondary Color"))
 EC = H2RGB(PT("Enemy Color"))
 FC = H2RGB(PT("Friendly Color"))
 TW = PN("Target Width")
+FOV = PN("Display FOV(dgree)")
+FOV_RAD = rad(FOV)
 HTW = TW // 2
+MODE = true
 -- buttons
 ZIB = PBTN(SCRW - 17, SCRW - 9, 7, 7, UC, UC2, 1, 1, DZI)
 ZOB = PBTN(SCRW - 9, SCRW - 9, 7, 7, UC, UC2, 1, 1, DZO)
-BTNS = { ZIB, ZOB }
+MODEB = PBTN(2, SCRW - 11, 8, 9, UC, UC2, 2, 2, DM)
+BTNS = { ZIB, ZOB, MODEB }
 
 -- radar targets
 RTS = {}
@@ -199,14 +217,18 @@ function onTick()
     if IB(6) then
         local px, py = IN(6), IN(7)
         -- press buttons
-        for _, btn in IPR(BTNS) do
-            btn:p(px, py)
+        if MODE then
+            ZIB:p(px, py)
+            ZOB:p(px, py)
         end
+        MODEB:p(px, py)
 
         if ZIB.op then
             ZOOM = m.min(MZOOM, ZOOM * 2)
         elseif ZOB.op then
             ZOOM = m.max(1, ZOOM / 2)
+        elseif MODEB.op then
+            MODE = not MODE
         elseif not PF then
             -- press radar targets
             for _, t in PR(RTS) do
@@ -237,25 +259,41 @@ function onTick()
 end
 
 function onDraw()
-    -- draw radar lines
-    SC(UC2)
-    DC(SCRW / 2, SCRW, SCRW)
-    DC(SCRW / 2, SCRW, SCRW / 2)
-    DL(SCRW / 2, SCRW, SCRW / 2, 0)
-    DL(SCRW / 2, SCRW, 0, SCRW / 2)
-    DL(SCRW / 2, SCRW, SCRW, SCRW / 2)
-    SC(UC)
-    local z1, z2 = string.format("%d", ZOOM), string.format("%d", ZOOM * 2)
-    DT(SCRW - #z1 * 5, SCRW * 0.72, z1)
-    DT(SCRW - #z2 * 5, SCRW * (2 - 3 ^ 0.5) / 2 - 7, z2)
+    if MODE then
+        -- draw radar lines
+        SC(UC2)
+        DC(SCRW / 2, SCRW, SCRW)
+        DC(SCRW / 2, SCRW, SCRW / 2)
+        DL(SCRW / 2, SCRW, SCRW / 2, 0)
+        DL(SCRW / 2, SCRW, 0, SCRW / 2)
+        DL(SCRW / 2, SCRW, SCRW, SCRW / 2)
+        SC(UC)
+        local z1, z2 = string.format("%d", ZOOM), string.format("%d", ZOOM * 2)
+        DT(SCRW - #z1 * 5, SCRW * 0.72, z1)
+        DT(SCRW - #z2 * 5, SCRW * (2 - 3 ^ 0.5) / 2 - 7, z2)
 
-    -- draw radar targets
-    for _, t in PR(RTS) do
-        t:draw()
-    end
+        -- draw radar targets
+        for _, t in PR(RTS) do
+            t:draw()
+        end
 
-    -- draw buttons
-    for _, btn in IPR(BTNS) do
-        btn:draw()
+        -- draw zoom buttons
+        ZIB:draw()
+        ZOB:draw()
+    else
+        -- draw radar lines
+        SC(UC2)
+        DL(SCRW / 2, 0, SCRW / 2, SCRW)
+        DL(0, SCRW / 2, SCRW, SCRW / 2)
+        SC(UC)
+        DT(2, 2, string.format("%d", FOV / 2))
+        DT(SCRW - 10, 2, string.format("%d", FOV / 2))
+
+        -- draw radar targets
+        for _, t in PR(RTS) do
+            t:draw()
+        end
     end
+    -- draw mode button
+    MODEB:draw()
 end
