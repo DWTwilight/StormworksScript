@@ -4,6 +4,20 @@ ON = output.setNumber
 OB = output.setBool
 PN = property.getNumber
 
+function H2RGB(e)
+    e = e:gsub("#", "")
+    return {
+        r = tonumber("0x" .. e:sub(1, 2)),
+        g = tonumber("0x" .. e:sub(3, 4)),
+        b = tonumber("0x" .. e:sub(5, 6)),
+        t = tonumber("0x" .. e:sub(7, 8))
+    }
+end
+
+function SC(c)
+    S.setColor(c.r, c.g, c.b, c.t)
+end
+
 function target(id, x, y, z, ttl, f)
     return {
         id = id,
@@ -49,6 +63,15 @@ TICK_PER_SEC = PN("Tick per Sec")
 TARGET = nil
 VID = 0
 GUIDE_METHOD = -1
+
+TARGET_INFO = {
+    id = 0,
+    speed = 0,
+    pos = { 0, 0, 0 },
+    friendly = false
+}
+
+UC2 = H2RGB(PT("UI Secondary Color"))
 
 function onTick()
     GUIDE_METHOD = IN(19)
@@ -102,8 +125,15 @@ function onTick()
     OB(1, false)
     if targetId == 0 and GUIDE_METHOD == MAP_GUIDE then
         -- target pos
-        ON(4, IN(21))
-        ON(6, IN(22))
+        local mapX, mapZ = IN(21), IN(22)
+        ON(4, mapX)
+        ON(6, mapZ)
+        TARGET_INFO = {
+            id = 0,
+            pos = { mapX, 0, mapZ },
+            speed = 0,
+            friendly = false
+        }
     elseif TARGET ~= nil then
         local tx, ty, tz, tvx, tvy, tvz = TARGET:curStatus()
         -- target pos
@@ -116,6 +146,13 @@ function onTick()
         ON(9, tvz)
         -- target friendly
         OB(1, TARGET.f)
+
+        TARGET_INFO = {
+            id = TARGET.id,
+            pos = { tx, ty, tz },
+            speed = (tvx ^ 2 + tvy ^ 2 + tvz ^ 2) ^ 0.5,
+            friendly = TARGET.f
+        }
     end
 
     -- trigger
@@ -125,5 +162,8 @@ end
 function onDraw()
     if VID > 0 and GUIDE_METHOD >= 0 then
         -- selected weapon and has guide method
+        SC(UC2)
+        DT(2, 38, "Target Info:")
+        DT(4, 35, "Id:")
     end
 end
