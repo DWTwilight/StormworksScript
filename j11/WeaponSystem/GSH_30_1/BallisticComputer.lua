@@ -8,6 +8,7 @@ atan = M.atan
 abs = M.abs
 acos = M.acos
 exp = M.exp
+log = M.log
 
 IN = input.getNumber
 IB = input.getBool
@@ -53,7 +54,7 @@ function EularRotate(v, B)
 end
 
 TICK_PER_SEC = PN("Tick per Sec")
-DRAG_COEFFICIENT = 1 - (1 - PN("[BC]Drag Coefficient")) ^ TICK_PER_SEC
+DRAG_COEFFICIENT = -TICK_PER_SEC * log(1 - PN("[BC]Drag Coefficient"))
 MUZZEL_VELOCITY = PN("[BC]Muzzel Velocity")
 GRAVITY = PN("[BC]Gravity")
 PRECISION = PN("[BC]Precision")
@@ -175,9 +176,9 @@ function onTick()
             Eular2RotMat({ IN(15), IN(17), IN(16) }))
 
         -- cal local yaw offset
-        local yawOffset = calAngleDiff2D({ velocityX, velocityZ }, { selfVX, selfVZ + MUZZEL_VELOCITY })
+        yawOffset = calAngleDiff2D({ velocityX, velocityZ }, { selfVX, selfVZ + MUZZEL_VELOCITY })
         -- cal local pitch offset
-        local pitchOffset = -calAngleDiff2D(
+        pitchOffset = -calAngleDiff2D(
             { (velocityX ^ 2 + velocityZ ^ 2) ^ 0.5, velocityY },
             { (selfVX ^ 2 + (selfVZ + MUZZEL_VELOCITY) ^ 2) ^ 0.5, selfVY })
 
@@ -189,3 +190,23 @@ end
 
 -- for test
 -- onTick()
+
+-- -- backward cal (only pitch offset, start from (0,0,0))
+-- local muzzelVelocity = { 0, 0, MUZZEL_VELOCITY }
+-- local offsetMuzzelVelocity = { 0, MUZZEL_VELOCITY * sin(pitchOffset), MUZZEL_VELOCITY * cos(pitchOffset) }
+-- local pos = { 0, 0, 0 }
+
+-- local dt = 1 / TICK_PER_SEC
+-- for i = 1, MAX_TICK do
+--     pos[1] = pos[1] + offsetMuzzelVelocity[1] * dt
+--     pos[2] = pos[2] + offsetMuzzelVelocity[2] * dt
+--     pos[3] = pos[3] + offsetMuzzelVelocity[3] * dt
+
+--     -- output
+--     print(string.format("tick: %d, pos: (%f, %f, %f)", i, pos[1], pos[2], pos[3]))
+
+--     -- apply gravity and drag
+--     offsetMuzzelVelocity[2] = offsetMuzzelVelocity[2] * 0.99 - GRAVITY / TICK_PER_SEC
+--     -- apply drag
+--     offsetMuzzelVelocity[3] = offsetMuzzelVelocity[3] * 0.99
+-- end

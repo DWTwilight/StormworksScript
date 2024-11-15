@@ -57,11 +57,11 @@
 input = {
     getNumber = function(i)
         local data = {
-            0, 0, 300,  -- self v
-            0, 0, 1000, -- self pos
-            0, 0, 2000, -- target pos
+            0, 0, 0,    -- self v
+            0, 0, 0,    -- self pos
+            0, 0, 1000, -- target pos
             0, 0, 0,    -- target v
-            0, -30,     -- windSpeedX, windSpeedZ
+            0, 0,       -- windSpeedX, windSpeedZ
             0, 0, 0     -- self rotation
         }
         return data[i]
