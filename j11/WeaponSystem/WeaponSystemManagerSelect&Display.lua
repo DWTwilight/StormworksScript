@@ -134,6 +134,7 @@ WEAPON_GROUP_MAPPING = {} -- index mapping, wid -> index
 WEAPON_MAPPING = {}       -- vid -> wid
 INDEX = 0                 -- current weapon index, 0 for overview
 GUIDE = 0                 -- current select guide method
+SYS_S = false             -- system switch
 
 -- btns
 RELEASE_BTN = PBTN(60, 1, 36, 7, "RELEASE", DC, DC2, 1, 1)
@@ -191,6 +192,8 @@ function releaseAll()
 end
 
 function onTick()
+    SYS_S = IB(5)
+
     if INIT_DURATION > 0 then
         -- init weapon group info
         for i = 1, WEAPON_COUNT do
@@ -234,14 +237,20 @@ function onTick()
 
         -- weapon switch control
         local sf = false
-        if IB(1) then
-            -- next weapon pulse
-            INDEX = clamp(INDEX + 1, 0, #WEAPON_GROUPS)
-            sf = true
-        elseif IB(2) then
-            -- previous weapon pulse
-            INDEX = clamp(INDEX - 1, 0, #WEAPON_GROUPS)
-            sf = true
+        if SYS_S then
+            -- system on
+            if IB(1) and IB(4) then
+                -- next weapon pulse
+                INDEX = clamp(INDEX + 1, 0, #WEAPON_GROUPS)
+                sf = true
+            elseif IB(2) and IB(4) then
+                -- previous weapon pulse
+                INDEX = clamp(INDEX - 1, 0, #WEAPON_GROUPS)
+                sf = true
+            end
+        else
+            -- system off
+            INDEX = 0
         end
 
         -- get current weapon, may be nil!
@@ -292,32 +301,37 @@ function onTick()
 end
 
 function onDraw()
-    RELEASE_BTN:draw()
-    if INDEX > 0 then
-        local wg = WEAPON_GROUPS[INDEX]
-        SC(UC2)
-        DT(2, 2, wg.wt)
-        DT(2, 9, TT[wg.type + 1])
-        DL(0, 15, 96, 15)
-        DT(2, 17, "STAT:")
-        DT(2, 24, "Guide:")
+    if SYS_S then
+        RELEASE_BTN:draw()
+        if INDEX > 0 then
+            local wg = WEAPON_GROUPS[INDEX]
+            SC(UC2)
+            DT(2, 2, wg.wt)
+            DT(2, 9, TT[wg.type + 1])
+            DL(0, 15, 96, 15)
+            DT(2, 17, "STAT:")
+            DT(2, 24, "Guide:")
 
-        -- draw ammo
-        local ammo, w = wg:info()
-        -- ammo text
-        local at = string.format("%d/%d", ammo, wg.ammo)
-        SC(ammo == 0 and DC or UC2)
-        DT(4, 89, at)
+            -- draw ammo
+            local ammo, w = wg:info()
+            -- ammo text
+            local at = string.format("%d/%d", ammo, wg.ammo)
+            SC(ammo == 0 and DC or UC2)
+            DT(4, 89, at)
 
-        -- draw status
-        SC((ammo == 0 or w == nil or w.status == 0) and DC or UC2)
-        if ammo == 0 or w == nil then
-            DT(30, 17, "EMPTY")
-        else
-            DT(30, 17, STT[w.status + 1])
+            -- draw status
+            SC((ammo == 0 or w == nil or w.status == 0) and DC or UC2)
+            if ammo == 0 or w == nil then
+                DT(30, 17, "EMPTY")
+            else
+                DT(30, 17, STT[w.status + 1])
+            end
+
+            -- draw guide btn group
+            GUIDE_BTN_GROUP:draw()
         end
-
-        -- draw guide btn group
-        GUIDE_BTN_GROUP:draw()
+    else
+        SC(DC)
+        DT(32, 43, "OFFLINE")
     end
 end
