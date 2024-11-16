@@ -231,7 +231,7 @@ function onTick()
         ON(1, 0)
         ON(2, 0)
     else
-        ON(1, LOCK_T.id)
+        ON(1, LOCK_T.lockF == 2 and LOCK_T.id or 0)
         ON(2, LOCK_T.lockF)
         ON(18, curVid)
         if curVid == 1 then
