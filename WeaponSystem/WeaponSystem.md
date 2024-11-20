@@ -90,11 +90,14 @@ number 2
 | status     | 2    |
 | ammo count | 12   |
 
-bool
-| channel | value           |
-| ------- | --------------- |
-| 1       | lauching        |
-| 2       | ready to detach |
+status
+
+| value | status          |
+| ----- | --------------- |
+| 0     | require target  |
+| 1     | ready           |
+| 2     | lauching        |
+| 3     | ready to detach |
 
 ### Weapon Control Data
 
@@ -105,14 +108,15 @@ Numbers
 | 1       | weapon id on vehicle, 0 if no weapon is selected |
 | 2       | guide method, 0-7, -1 if disabled                |
 | 3       | target id                                        |
-| 4       | target global pos x (For GPS Target)             |
-| 5       | target global pos z (For GPS Target)             |
+| 4-6     | target global pos                                |
+| 7-9     | target global speed                              |
 
 Bool
 
-| channel | value   |
-| ------- | ------- |
-| 1       | Trigger |
+| channel | value           |
+| ------- | --------------- |
+| 1       | Target Friendly |
+| 2       | Trigger         |
 
 ### Weapon Select & Display 
 

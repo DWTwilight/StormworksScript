@@ -1,2 +1,4 @@
 *.min.lua
 *.jpg
+
+/tmp

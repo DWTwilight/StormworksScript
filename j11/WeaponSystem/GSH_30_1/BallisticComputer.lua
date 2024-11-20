@@ -176,9 +176,9 @@ function onTick()
             Eular2RotMat({ IN(15), IN(17), IN(16) }))
 
         -- cal local yaw offset
-        yawOffset = calAngleDiff2D({ velocityX, velocityZ }, { selfVX, selfVZ + MUZZEL_VELOCITY })
+        local yawOffset = calAngleDiff2D({ velocityX, velocityZ }, { selfVX, selfVZ + MUZZEL_VELOCITY })
         -- cal local pitch offset
-        pitchOffset = -calAngleDiff2D(
+        local pitchOffset = -calAngleDiff2D(
             { (velocityX ^ 2 + velocityZ ^ 2) ^ 0.5, velocityY },
             { (selfVX ^ 2 + (selfVZ + MUZZEL_VELOCITY) ^ 2) ^ 0.5, selfVY })
 
