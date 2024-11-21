@@ -122,7 +122,7 @@ GMT = { "HUD", "RAD", "MAP", "EOTS" }
 TT = { "Utility", "Cannon", "Auto Cannon", "Unguided Bomb", "Guided Bomb", "AA Misslie", "AS Misslie", "Rocket" }
 STT = { "Require Target", "Ready", "LAUCHING", "LAUCH" }
 
-WEAPON_COUNT = PN("Weapon Count")
+WCNT = PN("Weapon Count")
 INIT_DURATION = PN("Init Duration")
 UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
@@ -186,8 +186,8 @@ function clamp(val, min, max)
 end
 
 function releaseAll()
-    for i = 1, WEAPON_COUNT do
-        OB(i, true)
+    for i = 1, WCNT do
+        OB(i + WCNT, true)
     end
 end
 
@@ -196,7 +196,7 @@ function onTick()
 
     if INIT_DURATION > 0 then
         -- init weapon group info
-        for i = 1, WEAPON_COUNT do
+        for i = 1, WCNT do
             local num = IN(2 * i - 1)
             if num ~= 0 then
                 local wid, type, guideMethodNum, defaultGuideMethod =
@@ -221,7 +221,7 @@ function onTick()
     -- after init
     if INIT_DURATION <= 0 then
         -- upsert weapon info
-        for i = 1, WEAPON_COUNT do
+        for i = 1, WCNT do
             local num, wid = IN(2 * i), WEAPON_MAPPING[i]
             if wid ~= nil then
                 -- weapon group has initialized
@@ -272,7 +272,7 @@ function onTick()
 
         -- touch control
         if IB(3) then
-            local tx, ty = IN(WEAPON_COUNT * 2 + 1), IN(WEAPON_COUNT * 2 + 2)
+            local tx, ty = IN(WCNT * 2 + 1), IN(WCNT * 2 + 2)
             RELEASE_BTN:press(tx, ty)
 
             if RELEASE_BTN.op then
@@ -282,7 +282,7 @@ function onTick()
                     releaseAll()
                 elseif currentWeapon ~= nil then
                     -- release current weapon
-                    OB(currentWeapon.vid, true)
+                    OB(currentWeapon.vid + WCNT, true)
                 end
             elseif INDEX > 0 then
                 -- check guide group press
