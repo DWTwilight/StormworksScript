@@ -174,6 +174,9 @@ function onTick()
     end
     for _, id in IPR(toRM) do
         RTS[id] = nil
+        if id == LOCK_T.id then
+            LOCK_T = nil
+        end
     end
 
     if IN(9) == 0 then
