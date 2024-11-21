@@ -90,6 +90,7 @@ function onTick()
     ON(2, GUIDE_METHOD)
     local targetId = IN(20)
     ON(3, targetId)
+    ON(10, IN(26)) -- weapon system datalink freq
 
     if RTAR ~= nil and RTAR.id ~= targetId then
         RTAR = nil

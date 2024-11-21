@@ -76,6 +76,7 @@ end
 -- configs
 APA, APS, APH = nil, nil, nil
 IFFK = nil
+W_DL_FREQ = M.random(100000, 999999) -- weapon system datalink freq
 
 -- status
 AP = false
@@ -91,7 +92,8 @@ APASB = PushButton(80, 6, 15, 7, "SET", UC, UC2, 1, 1)
 APSSB = PushButton(80, 13, 15, 7, "SET", UC, UC2, 1, 1)
 APHSB = PushButton(80, 20, 15, 7, "SET", UC, UC2, 1, 1)
 IFFSB = PushButton(80, 34, 15, 7, "SET", UC, UC2, 1, 1)
-BTNS = { APASB, APSSB, APHSB, IFFSB }
+WDLSB = PushButton(80, 48, 15, 7, "SET", UC, UC2, 1, 1)
+BTNS = { APASB, APSSB, APHSB, IFFSB, WDLSB }
 
 function onTick()
     if IB(1) then
@@ -109,6 +111,8 @@ function onTick()
             APH = clamp(IN(3), 0, 359) // 1
         elseif IFFSB.op then
             IFFK = clamp(IN(3), 0, 9999) // 1
+        elseif WDLSB.op then
+            WDLSB = clamp(IN(3), 100000, 999999) // 1
         end
     else
         for _, btn in ipairs(BTNS) do
@@ -141,6 +145,7 @@ function onTick()
     ON(2, APS or 0)
     ON(3, APH or 0)
     ON(4, IFFK or 0)
+    ON(5, W_DL_FREQ)
 end
 
 function TBAO(v, f)
@@ -175,6 +180,10 @@ function onDraw()
     end
     DT(6, 35, "IFFKEY:")
     DT(50, 35, TBAO(IFFK, "%04d"))
+
+    DT(2, 43, "WP Datalink")
+    DT(6, 49, "Freq:")
+    DT(50, 49, string.format("%06d", W_DL_FREQ))
 
     -- btns
     for _, btn in ipairs(BTNS) do

@@ -91,10 +91,10 @@ end
 
 -- status enum
 STATUS = {
-    REQUIRE_TARGET = 0,
-    READY = 1,
-    LAUCHING = 2,
-    READY_TO_DETACH = 3
+    RT = 0,
+    RDY = 1,
+    LCH = 2,
+    RTD = 3
 }
 
 
@@ -109,9 +109,10 @@ YAW_LIMIT = PN("Yaw Limit")
 PITCH_LIMIT = PN("Pitch Limit")
 DETONATE_THRESHOLD = PN("Detonate Threshold")
 
-CURRENT_STATUS = STATUS.REQUIRE_TARGET
+CURRENT_STATUS = STATUS.RT
 TARGET_ID = 0
 TARGET = nil
+DL_FREQ = 0
 
 function calAngleDiff2D(target, current)
     -- Function to calculate the dot product
@@ -173,7 +174,7 @@ function calInterceptVelocity(x, y, z, speedQuad)
 end
 
 function onTick()
-    if CURRENT_STATUS == STATUS.REQUIRE_TARGET then
+    if CURRENT_STATUS == STATUS.RT then
         -- initial status
         -- check if this is selected weapon
         if IN(18) == VID then
@@ -181,26 +182,28 @@ function onTick()
             TARGET_ID = IN(19)
             if TARGET_ID ~= 0 then
                 -- have target, transform status to ready
-                CURRENT_STATUS = STATUS.READY
+                CURRENT_STATUS = STATUS.RDY
             end
         end
-    elseif CURRENT_STATUS == STATUS.READY then
+    elseif CURRENT_STATUS == STATUS.RDY then
         -- check if this is selected weapon
         if IN(18) == VID then
             -- update target info
             TARGET_ID = IN(19)
             if TARGET_ID == 0 then
                 -- have no target, transform status to require target
-                CURRENT_STATUS = STATUS.REQUIRE_TARGET
+                CURRENT_STATUS = STATUS.RT
             elseif IB(5) then
                 -- have target & trigger, activate lauch procedure
-                CURRENT_STATUS = STATUS.READY_TO_DETACH
+                CURRENT_STATUS = STATUS.RTD
+                -- set datalink freq
+                DL_FREQ = IN(29)
             end
         else
             -- not selected weapon, reset status to require target
-            CURRENT_STATUS = STATUS.REQUIRE_TARGET
+            CURRENT_STATUS = STATUS.RT
         end
-    elseif CURRENT_STATUS == STATUS.READY_TO_DETACH then
+    elseif CURRENT_STATUS == STATUS.RTD then
         -- lauched
         -- update target info
         local ri = nil
@@ -270,4 +273,5 @@ function onTick()
         end
     end
     ON(3, CURRENT_STATUS)
+    ON(4, DL_FREQ)
 end
