@@ -185,9 +185,9 @@ function clamp(val, min, max)
     return M.min(max, M.max(min, val))
 end
 
-function releaseAll()
+function releaseAll(v)
     for i = 1, WCNT do
-        OB(i + WCNT, true)
+        OB(i + WCNT, v)
     end
 end
 
@@ -269,7 +269,7 @@ function onTick()
             GUIDE_BTN_GROUP.sgm = -1
         end
 
-
+        releaseAll(false)
         -- touch control
         if IB(3) then
             local tx, ty = IN(WCNT * 2 + 1), IN(WCNT * 2 + 2)
@@ -279,7 +279,7 @@ function onTick()
                 -- release selected
                 if INDEX == 0 then
                     -- release all
-                    releaseAll()
+                    releaseAll(true)
                 elseif currentWeapon ~= nil then
                     -- release current weapon
                     OB(currentWeapon.vid + WCNT, true)
