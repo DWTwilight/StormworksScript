@@ -20,6 +20,8 @@ AP_THROTTLE_FACTOR = PN("AP Throttle Factor")
 AP_THROTTLE_PRECISION = PN("AP Throttle Precision")
 
 M_PITCH_TRIM_FACTOR = PN("Mannual Pitch Trim Factor")
+M_PITCH_TRIM_DELAY = PN("Mannual Pitch Trim Delay")
+M_TRIM_COUNTER = 0
 
 -- less -> more sensitive, likly to overshoot
 AP_PITCH_FACTOR = 2000
@@ -37,7 +39,7 @@ function setOutputs(roll, pitch, yaw)
     ON(1, roll)
     ON(2, pitch)
     ON(3, yaw)
-    ON(10, yaw)
+    ON(10, -yaw)
     ON(4, 0.15 * (pitch - roll))
     ON(5, 0.15 * (pitch + roll))
 end
@@ -47,7 +49,7 @@ function setAirbreak(roll)
     ON(1, roll)
     ON(2, pitch)
     ON(3, 1)
-    ON(10, -1)
+    ON(10, 1)
     ON(4, 0.15 * (pitch - roll))
     ON(5, 0.15 * (pitch + roll))
 end
@@ -226,7 +228,13 @@ function onTick()
 
                 -- trim pitch when mannual control
                 if curPitchAs < TRIM_ZONE and pitchPid == 0 then
-                    pitchTrim = pitchTrim + pitchMInput * M_PITCH_TRIM_FACTOR
+                    if M_TRIM_COUNTER > M_PITCH_TRIM_DELAY then
+                        pitchTrim = pitchTrim + pitchMInput * M_PITCH_TRIM_FACTOR
+                    else
+                        M_TRIM_COUNTER = M_TRIM_COUNTER + 1
+                    end
+                else
+                    M_TRIM_COUNTER = 0
                 end
 
                 if airbreak then
