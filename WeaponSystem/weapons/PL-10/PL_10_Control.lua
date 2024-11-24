@@ -108,6 +108,7 @@ PITCH_SENSITIVITY = PN("Pitch Sensitivity")
 YAW_LIMIT = PN("Yaw Limit")
 PITCH_LIMIT = PN("Pitch Limit")
 DETONATE_THRESHOLD = PN("Detonate Threshold")
+TTL = PN("Time To Live") * TICK_PER_SEC
 
 CURRENT_STATUS = STATUS.RT
 TARGET_ID = 0
@@ -231,6 +232,10 @@ function onTick()
                 TARGET = nil
             end
         end
+
+        -- update self ttl, detonate if ttl expires
+        TTL = TTL - 1
+        OB(1, TTL < 0)
 
         -- set defaults
         ON(1, 0)
