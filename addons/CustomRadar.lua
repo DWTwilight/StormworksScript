@@ -3,7 +3,7 @@ g_savedata = {
     GROUP_IDS = {}
 }
 
-DETACH_DISTANCE = 25 -- sub vehicle to main vehicle
+DETACH_DISTANCE = 30 -- sub vehicle to main vehicle
 SEND_BATCH_SIZE = 4  -- send at most 4 vehicle data in one tick
 TARGET_DIAL_NAME = "[CR] targetId"
 TARGET_ID_PAD_NAME_FORMAT = "[CR] t%did"
@@ -141,6 +141,19 @@ function onGroupSpawn(group_id, peer_id, x, y, z, group_cost)
     end
 end
 
+function onVehicleSpawn(vehicle_id, peer_id, x, y, z, group_cost, group_id)
+    local group = VEHICLE_GROUPS[group_id]
+    if group ~= nil then
+        -- check if v is in group
+        if VG_MAPPING[vehicle_id] == nil then
+            -- add this new vehicle to group vehicle list
+            group.vehicles[vehicle_id] = vehicle(vehicle_id, group_id)
+            -- add this v to mapping
+            VG_MAPPING[vehicle_id] = group_id
+        end
+    end
+end
+
 function onVehicleDespawn(vehicle_id, peer_id)
     -- get gid of vehicle
     local group_id = VG_MAPPING[vehicle_id]
@@ -247,14 +260,14 @@ function onTick(game_ticks)
                 for i = (CURRENT_INTERVAL - 1) * SEND_BATCH_SIZE + 1, math.min(CURRENT_INTERVAL * SEND_BATCH_SIZE, #TARGET_LIST) do
                     local v = TARGET_LIST[i]
                     local x, y, z = matrix.position(v.matrix)
-                    table.insert(cachedPage, { id = v.id, x = x, y = y, z = z })
+                    table.insert(cachedPage, { id = v.id, groupId = v.groupId, x = x, y = y, z = z })
                 end
             end
             -- send target data
             for i = 1, SEND_BATCH_SIZE do
                 local tData = cachedPage[i]
-                if tData == nil or tData.id == vid then
-                    -- nil target or self
+                if tData == nil or tData.id == vid or tData.groupId == VG_MAPPING[vid] then
+                    -- nil target or self or same group
                     -- set target id pad to 0
                     server.setVehicleKeypad(vid, TARGET_ID_PAD_NAMES[i], 0)
                 else
