@@ -60,7 +60,7 @@ GRAVITY = PN("[BC]Gravity")
 PRECISION = PN("[BC]Precision")
 MAX_ITER_COUNT = PN("[BC]Max Iterations")
 MAX_TICK = PN("[BC]Max Tick")
-TARGET_DELAY_COMPENSATION = PN("[BC]Target Delay Compensation")
+TDC = PN("[BC]Target Delay Compensation")
 SELF_DELAY_COMPENSATION = PN("[BC]Self Delay Compensation")
 
 function calculateVelocity(x, y, z, tick, windSpeedX, windSpeedZ)
@@ -85,7 +85,7 @@ function calculateTargetPosition(selfX, selfY, selfZ,
     local st = SELF_DELAY_COMPENSATION / TICK_PER_SEC
     selfX, selfY, selfZ = selfX + st * selfVX, selfY + st * selfVY, selfZ + st * selfVZ
 
-    local t = (tick + TARGET_DELAY_COMPENSATION) / TICK_PER_SEC
+    local t = (tick + TDC) / TICK_PER_SEC
     return targetX - selfX + targetVx * t,
         targetY - selfY + targetVy * t,
         targetZ - selfZ + targetVz * t

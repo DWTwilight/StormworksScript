@@ -100,20 +100,23 @@ STATUS = {
 
 VID = PN("Id on Vehicle") -- id on vehicle
 TPS = PN("Tick per Sec")
-LAUCH_CONTROL_DELAY = PN("Lauch Control Delay(tick)")
-TARGET_DELAY_COMPENSATION = PN("Target Delay Compensation")
-SELF_DELAY_COMPENSAION = PN("Self Delay Compensation")
-YAW_SENSITIVITY = PN("Yaw Sensitivity")
-PITCH_SENSITIVITY = PN("Pitch Sensitivity")
-YAW_LIMIT = PN("Yaw Limit")
-PITCH_LIMIT = PN("Pitch Limit")
-DETONATE_THRESHOLD = PN("Detonate Threshold")
+LCD = PN("Lauch Control Delay(tick)")
+TDC = PN("Target Delay Compensation")
+SDC = PN("Self Delay Compensation")
+YAWS = PN("Yaw Sensitivity")
+PITCHS = PN("Pitch Sensitivity")
+YAWL = PN("Yaw Limit")
+PITCHL = PN("Pitch Limit")
+DTTHRE = PN("Detonate Threshold")
 TTL = PN("Time To Live") * TPS
+STRIKE_DIST = PN("Strike Distance") * 1000
+CRUISE_ALT = PN("Cruise Altitude")
 
 CURRENT_STATUS = STATUS.RT
 TARGET_ID = 0
 TARGET = nil
 DL_FREQ = 0
+CRUISE = true
 
 function calAngleDiff2D(target, current)
     -- Function to calculate the dot product
@@ -158,9 +161,27 @@ function calInterceptVelocity(x, y, z, speedQuad)
     if TARGET.v == nil then
         return nil, nil, nil, false
     end
-    local tx, ty, tz = TARGET:curPos(TARGET_DELAY_COMPENSATION)
+    local tx, ty, tz = TARGET:curPos(TDC)
     local tvx, tvy, tvz = TARGET.v[1], TARGET.v[2], TARGET.v[3]
     local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+
+    if CRUISE then
+        -- cruise stage
+        if dist <= STRIKE_DIST then
+            -- start strike
+            CRUISE = false
+        else
+            -- cruise control
+            -- set tvy to 0
+            tvy = 0
+            -- calculate target pitch
+            local targetPitchAng = clamp((CRUISE_ALT - y) / 4000 * pi, -pi / 4, pi / 4)
+            -- cal fake ty & fake dist
+            ty = y + ((tx - x) ^ 2 + (tz - z) ^ 2) ^ 0.5 * sin(targetPitchAng)
+            dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+        end
+    end
+
     local nvx, nvy, nvz = normalize(tx - x, ty - y, tz - z, dist)
 
     local k = solveQuadratic(
@@ -171,7 +192,7 @@ function calInterceptVelocity(x, y, z, speedQuad)
         return nil
     end
     local timeToImpact = dist / k
-    return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DETONATE_THRESHOLD
+    return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DTTHRE
 end
 
 function onTick()
@@ -241,8 +262,8 @@ function onTick()
         ON(1, 0)
         ON(2, 0)
         -- update fin & detonate control
-        if LAUCH_CONTROL_DELAY > 0 then
-            LAUCH_CONTROL_DELAY = LAUCH_CONTROL_DELAY - 1
+        if LCD > 0 then
+            LCD = LCD - 1
         elseif TARGET ~= nil then
             -- calculate fin control data
             -- get physics sensor data
@@ -255,9 +276,9 @@ function onTick()
             local vx, vy, vz = EularRotate({ vxl, vyl, vzl }, tb)
             -- get intercept velocity
             local icVx, icVy, icVz, detonate = calInterceptVelocity(
-                x + vx * SELF_DELAY_COMPENSAION,
-                y + vy * SELF_DELAY_COMPENSAION,
-                z + vz * SELF_DELAY_COMPENSAION,
+                x + vx * SDC,
+                y + vy * SDC,
+                z + vz * SDC,
                 vxl ^ 2 + vyl ^ 2 + vzl ^ 2)
             if icVx ~= nil then
                 -- transform to local speed
@@ -269,8 +290,8 @@ function onTick()
                     { (vzl ^ 2 + vxl ^ 2) ^ 0.5, vyl })
 
 
-                ON(1, clamp(yawOffset / pi * YAW_SENSITIVITY, -YAW_LIMIT, YAW_LIMIT))
-                ON(2, clamp(pitchOffset / pi * PITCH_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT))
+                ON(1, clamp(yawOffset / pi * YAWS, -YAWL, YAWL))
+                ON(2, clamp(pitchOffset / pi * PITCHS, -PITCHL, PITCHL))
             end
             if detonate then
                 OB(1, true)
