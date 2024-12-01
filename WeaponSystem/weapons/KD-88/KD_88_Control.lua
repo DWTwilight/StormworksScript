@@ -112,9 +112,9 @@ TTL = PN("Time To Live") * TPS
 STRIKE_DIST = PN("Strike Distance")
 CRUISE_ALT = PN("Cruise Altitude")
 
-CURRENT_STATUS = STATUS.RT
-TARGET_ID = 0
-TARGET = nil
+C_STAT = STATUS.RT
+T_ID = 0
+T = nil
 DL_FREQ = 0
 CRUISE = true
 
@@ -158,11 +158,11 @@ function normalize(x, y, z, l)
 end
 
 function calInterceptVelocity(x, y, z, speedQuad)
-    if TARGET.v == nil then
+    if T.v == nil then
         return nil, nil, nil, false
     end
-    local tx, ty, tz = TARGET:curPos(TDC)
-    local tvx, tvy, tvz = TARGET.v[1], TARGET.v[2], TARGET.v[3]
+    local tx, ty, tz = T:curPos(TDC)
+    local tvx, tvy, tvz = T.v[1], T.v[2], T.v[3]
     local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
 
     if CRUISE then
@@ -196,61 +196,74 @@ function calInterceptVelocity(x, y, z, speedQuad)
 end
 
 function onTick()
-    if CURRENT_STATUS == STATUS.RT then
+    if C_STAT == STATUS.RT then
         -- initial status
         -- check if this is selected weapon
         if IN(18) == VID then
             -- update target info
-            TARGET_ID = IN(19)
-            if TARGET_ID ~= 0 then
+            T_ID = IN(19)
+            if T_ID ~= 0 or (IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0)) then
                 -- have target, transform status to ready
-                CURRENT_STATUS = STATUS.RDY
+                C_STAT = STATUS.RDY
             end
         end
-    elseif CURRENT_STATUS == STATUS.RDY then
+    elseif C_STAT == STATUS.RDY then
         -- check if this is selected weapon
         if IN(18) == VID then
             -- update target info
-            TARGET_ID = IN(19)
-            if TARGET_ID == 0 then
+            T_ID = IN(19)
+            if T_ID == 0 then
+                -- check if is gps target
+                if IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0) then
+                    T_ID = -1
+                end
+            end
+            if T_ID == 0 then
                 -- have no target, transform status to require target
-                CURRENT_STATUS = STATUS.RT
+                C_STAT = STATUS.RT
             elseif IB(5) then
                 -- have target & trigger, activate lauch procedure
-                CURRENT_STATUS = STATUS.RTD
+                C_STAT = STATUS.RTD
                 -- set datalink freq
                 DL_FREQ = IN(29)
+                if T_ID == -1 then
+                    -- create target mannually
+                    T = target({ IN(30), 0, IN(31) }, 0)
+                    T.v = { 0, 0, 0 }
+                end
             end
         else
             -- not selected weapon, reset status to require target
-            CURRENT_STATUS = STATUS.RT
+            C_STAT = STATUS.RT
         end
-    elseif CURRENT_STATUS == STATUS.RTD then
+    elseif C_STAT == STATUS.RTD then
         -- lauched
-        -- update target info
-        local ri = nil
-        for i = 1, 4 do
-            if IN(i) == TARGET_ID then
-                ri = i
-                break
+        if T_ID > 0 then
+            -- update radar target info
+            local ri = nil
+            for i = 1, 4 do
+                if IN(i) == T_ID then
+                    ri = i
+                    break
+                end
             end
-        end
 
-        if ri ~= nil then
-            -- update or create target info
-            local tx, ty, tz = IN(3 * ri + 3), IN(3 * ri + 4), IN(3 * ri + 5)
-            if TARGET == nil then
-                TARGET = target({ tx, ty, tz }, IN(5))
-            else
-                TARGET:update({ tx, ty, tz }, IN(5))
+            if ri ~= nil then
+                -- update or create target info
+                local tx, ty, tz = IN(3 * ri + 3), IN(3 * ri + 4), IN(3 * ri + 5)
+                if T == nil then
+                    T = target({ tx, ty, tz }, IN(5))
+                else
+                    T:update({ tx, ty, tz }, IN(5))
+                end
             end
-        end
 
-        -- update ttl
-        if TARGET ~= nil then
-            TARGET:update()
-            if TARGET.ttl < 0 then
-                TARGET = nil
+            -- update ttl
+            if T ~= nil then
+                T:update()
+                if T.ttl < 0 then
+                    T = nil
+                end
             end
         end
 
@@ -264,7 +277,7 @@ function onTick()
         -- update fin & detonate control
         if LCD > 0 then
             LCD = LCD - 1
-        elseif TARGET ~= nil then
+        elseif T ~= nil then
             -- calculate fin control data
             -- get physics sensor data
             local x, y, z, vxl, vyl, vzl, b =
@@ -298,6 +311,6 @@ function onTick()
             end
         end
     end
-    ON(3, CURRENT_STATUS)
+    ON(3, C_STAT)
     ON(4, DL_FREQ)
 end
