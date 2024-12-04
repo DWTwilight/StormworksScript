@@ -41,7 +41,7 @@ function PIR(x, y, rectX, rectY, rectW, rectH)
     return x >= rectX and y >= rectY and x < rectX + rectW and y < rectY + rectH
 end
 
-function ToggleButton(x, y, w, h, text, color, toggleColor, toggled, tx, ty)
+function TBTN(x, y, w, h, text, color, toggleColor, toggled, tx, ty)
     return {
         x = x,
         y = y,
@@ -96,25 +96,25 @@ function tM(M)
     return N
 end
 
-function EularRotate(v, B)
+function ER(v, B)
     local PN = Mv(B, { v[1], v[3], v[2] })
     return { PN[1], PN[3], PN[2] }
 end
 
 UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
-YAW_MAX = PN("Yaw Max")       -- in radians
-PITCH_MAX = PN("Pitch Max")   -- in radians
-PITCH_MIN = PN("Pitch Min")   -- in radians
-YAW_BASE = PN("Yaw Base")     -- in radians, output will be yaw / YAW_BASE
-PITCH_BASE = PN("Pitch Base") -- in radians, output will be pitch / PITCH_BASE
-SENSITIVITY = PN("Sensitivity")
+YMAX = PN("Yaw Max")     -- in radians
+PMAX = PN("Pitch Max")   -- in radians
+PMIN = PN("Pitch Min")   -- in radians
+YBASE = PN("Yaw Base")   -- in radians, output will be yaw / YAW_BASE
+PBASE = PN("Pitch Base") -- in radians, output will be pitch / PITCH_BASE
+SEN = PN("Sensitivity")
 
-TOUCH_FLAG = false
+TF = false
 -- btns
-IR_BTN = ToggleButton(2, 2, 16, 8, "IR", UC2, UC, false, 4, 2)
-STA_BTN = ToggleButton(21, 2, 17, 8, "STA", UC2, UC, false, 2, 2)
-BUTTONS = {
+IR_BTN = TBTN(2, 2, 16, 8, "IR", UC2, UC, false, 4, 2)
+STA_BTN = TBTN(21, 2, 17, 8, "STA", UC2, UC, false, 2, 2)
+BTNS = {
     IR_BTN,
     STA_BTN
 }
@@ -122,64 +122,64 @@ BUTTONS = {
 IR = false
 STA = false
 -- sta related
-STA_FLAG = false
-TARGET_ORT = nil
+STAF = false
+TORT = nil
 -- camera orientation
-CAMERA_PIVOT = { 0, 0 }
+CP = { 0, 0 }
 ZOOM = 0
 
 function onTick()
     -- handle touchscreen input
     if IB(1) then
         local tx, ty = IN(1), IN(2)
-        if not TOUCH_FLAG then
+        if not TF then
             -- handle touch
-            for _, btn in ipairs(BUTTONS) do
+            for _, btn in ipairs(BTNS) do
                 btn:toggle(tx, ty)
             end
             IR = IR_BTN.toggled
             STA = STA_BTN.toggled
         end
-        TOUCH_FLAG = true
+        TF = true
     else
-        TOUCH_FLAG = false
+        TF = false
     end
     -- set IR out
     OB(1, IR)
     local B = nil
-    if STA and STA_FLAG then
+    if STA and STAF then
         -- stabilizer on
-        B = Eular2RotMat({ IN(4), IN(6), IN(5) })                                      -- global to local matrix
-        local cameraTargetVectorLocal = EularRotate(TARGET_ORT, B)
-        CAMERA_PIVOT[1] = atan(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
-        CAMERA_PIVOT[2] = asin(cameraTargetVectorLocal[2])                             -- pitch
+        B = Eular2RotMat({ IN(4), IN(6), IN(5) })                            -- global to local matrix
+        local cameraTargetVectorLocal = ER(TORT, B)
+        CP[1] = atan(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
+        CP[2] = asin(cameraTargetVectorLocal[2])                             -- pitch
     end
     -- apply mannual control
     ZOOM = IN(3)
     local zoomF = (1 - 0.98 * ZOOM * ZOOM)
     local mYaw, mPitch = IN(7), IN(8)
-    CAMERA_PIVOT[1] = clamp(CAMERA_PIVOT[1] + mYaw * SENSITIVITY * zoomF, -YAW_MAX, YAW_MAX)
-    CAMERA_PIVOT[2] = clamp(CAMERA_PIVOT[2] + mPitch * SENSITIVITY * zoomF, PITCH_MIN, PITCH_MAX)
+    CP[1] = clamp(CP[1] + mYaw * SEN * zoomF, -YMAX, YMAX)
+    CP[2] = clamp(CP[2] + mPitch * SEN * zoomF, PMIN, PMAX)
     -- output camera pivot
-    ON(1, CAMERA_PIVOT[1] / YAW_BASE)
-    ON(2, CAMERA_PIVOT[2] / PITCH_BASE)
+    ON(1, CP[1] / YBASE)
+    ON(2, CP[2] / PBASE)
     if STA then
-        STA_FLAG = true
+        STAF = true
         -- update STA target camera orientation
         if B == nil then
             B = Eular2RotMat({ IN(4), IN(6), IN(5) })
         end
-        TARGET_ORT = EularRotate({
-            cos(CAMERA_PIVOT[2]) * sin(CAMERA_PIVOT[1]),
-            sin(CAMERA_PIVOT[2]),
-            cos(CAMERA_PIVOT[2]) * cos(CAMERA_PIVOT[1]) }, tM(B))
+        TORT = ER({
+            cos(CP[2]) * sin(CP[1]),
+            sin(CP[2]),
+            cos(CP[2]) * cos(CP[1]) }, tM(B))
     else
-        STA_FLAG = false
+        STAF = false
     end
 end
 
 function onDraw()
-    for _, btn in ipairs(BUTTONS) do
+    for _, btn in ipairs(BTNS) do
         btn:draw()
     end
 end
