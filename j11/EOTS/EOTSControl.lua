@@ -3,6 +3,8 @@ pi = m.pi
 pi2 = 2 * pi
 sin = m.sin
 cos = m.cos
+atan = m.atan
+asin = m.asin
 
 S = screen
 DR = S.drawRect
@@ -96,7 +98,7 @@ end
 
 function EularRotate(v, B)
     local PN = Mv(B, { v[1], v[3], v[2] })
-    return PN[1], PN[3], PN[2]
+    return { PN[1], PN[3], PN[2] }
 end
 
 UC = H2RGB(PT("UI Primary Color"))
@@ -119,6 +121,9 @@ BUTTONS = {
 -- options
 IR = false
 STA = false
+-- sta related
+STA_FLAG = false
+TARGET_ORT = nil
 -- camera orientation
 CAMERA_PIVOT = { 0, 0 }
 ZOOM = 0
@@ -141,9 +146,13 @@ function onTick()
     end
     -- set IR out
     OB(1, IR)
-    if STA then
+    local B = nil
+    if STA and STA_FLAG then
         -- stabilizer on
-        -- local B = Eular2RotMat({ IN(4), IN(6), IN(5) }) -- global to local matrix
+        B = Eular2RotMat({ IN(4), IN(6), IN(5) })                                      -- global to local matrix
+        local cameraTargetVectorLocal = EularRotate(TARGET_ORT, B)
+        CAMERA_PIVOT[1] = atan(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
+        CAMERA_PIVOT[2] = asin(cameraTargetVectorLocal[2])                             -- pitch
     end
     -- apply mannual control
     ZOOM = IN(3)
@@ -155,7 +164,17 @@ function onTick()
     ON(1, CAMERA_PIVOT[1] / YAW_BASE)
     ON(2, CAMERA_PIVOT[2] / PITCH_BASE)
     if STA then
+        STA_FLAG = true
         -- update STA target camera orientation
+        if B == nil then
+            B = Eular2RotMat({ IN(4), IN(6), IN(5) })
+        end
+        TARGET_ORT = EularRotate({
+            cos(CAMERA_PIVOT[2]) * sin(CAMERA_PIVOT[1]),
+            sin(CAMERA_PIVOT[2]),
+            cos(CAMERA_PIVOT[2]) * cos(CAMERA_PIVOT[1]) }, tM(B))
+    else
+        STA_FLAG = false
     end
 end
 
