@@ -121,10 +121,9 @@ BTNS = {
 -- options
 IR = false
 STA = false
--- sta related
-STAF = false
-TORT = nil
--- camera orientation
+-- camera orientation global
+CORG = nil
+-- camera orientation local
 CP = { 0, 0 }
 ZOOM = 0
 
@@ -146,11 +145,10 @@ function onTick()
     end
     -- set IR out
     OB(1, IR)
-    local B = nil
-    if STA and STAF then
+    local B = Eular2RotMat({ IN(4), IN(6), IN(5) })
+    if STA then
         -- stabilizer on
-        B = Eular2RotMat({ IN(4), IN(6), IN(5) })                            -- global to local matrix
-        local cameraTargetVectorLocal = ER(TORT, B)
+        local cameraTargetVectorLocal = ER(CORG, B)
         CP[1] = atan(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
         CP[2] = asin(cameraTargetVectorLocal[2])                             -- pitch
     end
@@ -163,19 +161,12 @@ function onTick()
     -- output camera pivot
     ON(1, CP[1] / YBASE)
     ON(2, CP[2] / PBASE)
-    if STA then
-        STAF = true
-        -- update STA target camera orientation
-        if B == nil then
-            B = Eular2RotMat({ IN(4), IN(6), IN(5) })
-        end
-        TORT = ER({
-            cos(CP[2]) * sin(CP[1]),
-            sin(CP[2]),
-            cos(CP[2]) * cos(CP[1]) }, tM(B))
-    else
-        STAF = false
-    end
+
+    -- update global camera orientation
+    CORG = ER({
+        cos(CP[2]) * sin(CP[1]),
+        sin(CP[2]),
+        cos(CP[2]) * cos(CP[1]) }, tM(B))
 end
 
 function onDraw()
