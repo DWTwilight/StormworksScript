@@ -2,6 +2,8 @@ M = math
 TAN = M.tan
 AT = M.atan
 SIN = M.sin
+COS = M.cos
+ABS = M.abs
 
 S = screen
 DL = S.drawLine
@@ -34,16 +36,22 @@ function SC(c)
     S.setColor(c.r, c.g, c.b, c.t)
 end
 
-function CDL(x1, y1, x2, y2)
-    DL((x1 + OX) // 1, (y1 + OY) // 1, (x2 + OX) // 1, (y2 + OY) // 1)
+function createCoordConvertMatrix(yawRad, pitchRad)
+    return {
+        { COS(yawRad),                  0,             -SIN(yawRad) },
+        { -SIN(yawRad) * SIN(pitchRad), COS(pitchRad), -COS(yawRad) * SIN(pitchRad) },
+        { SIN(yawRad) * COS(pitchRad),  SIN(pitchRad), COS(yawRad) * COS(pitchRad) }
+    }
 end
 
-function CDR(x, y, w, h)
-    DR((x + OX) // 1, (y + OY) // 1, w, h)
-end
-
-function CDC(x, y, r)
-    DC((x + OX) // 1, (y + OY) // 1, r)
+function MMul(v, M)
+    local u = { 0, 0, 0 }
+    for i = 1, 3 do
+        for j = 1, 3 do
+            u[i] = u[i] + M[i][j] * v[j]
+        end
+    end
+    return u[1], u[2], u[3]
 end
 
 function RT(id, x, y, z, f, ttl)
@@ -66,54 +74,51 @@ function RT(id, x, y, z, f, ttl)
             t.ttlF = ttl
             t.f = f
         end,
-        curPos = function(t, tickOffset)
+        curPos = function(t)
             if t.speedL == nil then
                 return t.pos[1], t.pos[2], t.pos[3]
             end
-            local totalTickOffset = tickOffset + t.ttlF - t.ttl
-            return t.pos[1] + t.speedL[1] * totalTickOffset,
-                t.pos[2] + t.speedL[2] * totalTickOffset,
-                t.pos[3] + t.speedL[3] * totalTickOffset
+            local totalTickOffset = DELAY_C + t.ttlF - t.ttl
+            return MMul(
+                {
+                    t.pos[1] + t.speedL[1] * totalTickOffset + OFFSET_X,
+                    t.pos[2] + t.speedL[2] * totalTickOffset + OFFSET_Y,
+                    t.pos[3] + t.speedL[3] * totalTickOffset + OFFSET_Z
+                }, CAMERA_COORD_MAT)
         end,
         draw = function(t)
+            local x, y, z = t:curPos()
             -- check if in front
-            local x, y, z = t:curPos(DELAY_C)
             if z > 0 then
                 local sx, sy =
-                    SCR_W / 2 + (x / z) * L - HRTW - 1,
-                    SCR_W / 2 + (y / z) * -L - HRTW - 1
+                    SCR_W / 2 + SCR_W / FOV * AT(x, z) - HRTW - 1,
+                    SCR_W / 2 - SCR_W / FOV * AT(y, (x ^ 2 + z ^ 2) ^ 0.5) - HRTW - 1
                 if t.lockF == 0 then
                     -- not locked
-                    SC(RTC)
+                    SC(UC)
                 elseif t.lockF == 1 then
                     -- locking
-                    SC(LOCKB and RTLC or RTC)
+                    SC(LOCKB and UC2 or UC)
                 else
                     -- locked
-                    SC(RTLC)
-                    if BC_REACHABLE then
-                        -- draw shoot circle
-                        local ox, oy = SCR_W / 2 + L * TAN(BC_OFFSET_YAW), SCR_W / 2 + -L * TAN(BC_OFFSET_PITCH)
-                        CDL(ox, oy, sx + HRTW, sy + HRTW)
-                        CDC(ox, oy, 3)
-                    else
-                        -- draw lock line
-                        CDL(SCR_W / 2, SCR_W / 2, sx + HRTW, sy + HRTW)
-                    end
+                    SC(UC2)
+                    -- draw lock line
+                    DL(SCR_W / 2, SCR_W / 2, sx + HRTW, sy + HRTW)
                 end
 
-                CDR(sx, sy, RTW + 1, RTW + 1)
+                DR(sx, sy, RTW + 1, RTW + 1)
                 if t.f then
-                    CDL(sx, sy, sx + RTW + 1, sy + RTW + 1)
-                    CDL(sx + RTW + 1, sy, sx, sy + RTW + 1)
+                    DL(sx, sy, sx + RTW + 1, sy + RTW + 1)
+                    DL(sx + RTW + 1, sy, sx, sy + RTW + 1)
                 end
+                -- TODO: draw distance
             end
         end,
-        canLock = function(t)
-            local x, y, z = t:curPos(DELAY_C)
-            if z > 0 and (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 <= RANGE * 1000 then
+        canLock = function(t, la)
+            local x, y, z = t:curPos()
+            if z > 0 then
                 local a = AT((x ^ 2 + y ^ 2) ^ 0.5, z)
-                return a < t.lockF == 2 and LA * 4 or LA, a
+                return a < t.lockF == 2 and la * 4 or la, a
             end
             return false, 0
         end
@@ -122,33 +127,25 @@ end
 
 DELAY_C = PN("Delay Compensate(ticks)")
 SCR_W = PN("Screen Width")
-LOF = PN("Look Offset Factor")
-COY = PN("Crosshair Offset Y")
-FOV = PN("FOV (rad)")
 RTW = PN("Rardar Target Width")
-LA = PN("Lock Angle(rad)")
 HRTW = RTW // 2
+FOV_MIN = PN("FOV Min(rad)")
+FOV_MAX = PN("FOV Max(rad)")
+LAP = PN("Lock Angle Percentage") -- opposed to FOV
+OFFSET_X = PN("Camera Offset X")
+OFFSET_Y = PN("Camera Offset Y")
+OFFSET_Z = PN("Camera Offset Z")
 
-CC = H2RGB(PT("Crosshair Color"))
-RTC = H2RGB(PT("Rardar Target Color"))
-RTLC = H2RGB(PT("Rardar Target Lock Color"))
+UC = H2RGB(PT("UI Primary Color"))
+UC2 = H2RGB(PT("UI Secondary Color"))
 
-L = SCR_W / 2 / TAN(FOV / 2)
-OX, OY = 0, 0
+CAMERA_COORD_MAT = nil
+FOV = 0
 RTS = {}
 LOCK_T = nil
-RANGE = 0
 LOCKB = false
 
-BC_REACHABLE = false
-BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
-
 function onTick()
-    BC_REACHABLE = false
-    BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
-
-    OX, OY = IN(6) * LOF / 2, -IN(7) * LOF - COY
-    local curVid = IN(8)
     -- get radar data
     local ttl = IN(5)
     for i = 1, 4 do
@@ -179,16 +176,21 @@ function onTick()
         end
     end
 
-    if IN(9) == 0 then
-        -- enable hud lock
+    -- get current camera coord convert matrix
+    CAMERA_COORD_MAT = createCoordConvertMatrix(IN(7), IN(8))
+    -- calculate current FOV
+    FOV = (FOV_MIN - FOV_MAX) * IN(9) + FOV_MAX
+
+    if IN(6) == 3 then
+        -- enable EOTS lock
         LOCKB = IB(6)
-        -- set range
-        RANGE = curVid == 1 and 4 or 200
+        -- calculate lock angle
+        local la = FOV * LAP
 
         -- update current lock status
         if LOCK_T ~= nil and LOCK_T.lockF == 2 then
             -- have a locked target
-            local canLock, _ = LOCK_T:canLock()
+            local canLock, _ = LOCK_T:canLock(la)
             if IB(5) or not canLock then
                 -- cancel lock
                 LOCK_T.lockF = 0
@@ -196,10 +198,10 @@ function onTick()
             end
         else
             -- update current lockable target
-            local minA = LA
+            local minA = la
             local lockableTarget = nil
             for _, t in pairs(RTS) do
-                local canLock, a = t:canLock()
+                local canLock, a = t:canLock(la)
                 if canLock and a < minA then
                     lockableTarget = t
                     minA = a
@@ -236,23 +238,17 @@ function onTick()
     else
         ON(1, LOCK_T.lockF == 2 and LOCK_T.id or 0)
         ON(2, LOCK_T.lockF)
-        ON(18, curVid)
-        if curVid == 1 then
-            -- get bc data
-            BC_REACHABLE = IB(7)
-            BC_OFFSET_YAW, BC_OFFSET_PITCH = IN(13), IN(14)
-        end
     end
 end
 
 function onDraw()
     -- draw crosshair
-    SC(CC)
+    SC(UC2)
     local w, h = SCR_W / 2, SCR_W / 2;
-    CDL(w - 2, h, w, h)
-    CDL(w + 1, h, w + 3, h)
-    CDL(w, h - 2, w, h)
-    CDL(w, h + 1, w, h + 3)
+    DL(w - 2, h, w, h)
+    DL(w + 1, h, w + 3, h)
+    DL(w, h - 2, w, h)
+    DL(w, h + 1, w, h + 3)
 
     if LOCK_T ~= nil and LOCK_T.lockF == 2 then
         -- only draw locked target

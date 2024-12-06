@@ -134,7 +134,6 @@ STA = false
 CORG = nil
 -- camera orientation local
 CP = { 0, 0 }
-ZOOM = 0
 HANG = 0
 
 function onTick()
@@ -163,14 +162,15 @@ function onTick()
         CP[2] = as(cameraTargetVectorLocal[2])                             -- pitch
     end
     -- apply mannual control
-    ZOOM = IN(3)
-    local zoomF = (1 - 0.98 * ZOOM * ZOOM)
+    local zoomF = (1 - 0.98 * IN(3) ^ 2)
     local mYaw, mPitch = IN(7), IN(8)
     CP[1] = clamp(CP[1] + mYaw * SEN * zoomF, -YMAX, YMAX)
     CP[2] = clamp(CP[2] + mPitch * SEN * zoomF, PMIN, PMAX)
     -- output camera pivot
     ON(1, CP[1] / YBASE)
     ON(2, CP[2] / PBASE)
+    ON(3, CP[1])
+    ON(4, CP[2])
 
     -- update global camera orientation
     CORG = ER({
