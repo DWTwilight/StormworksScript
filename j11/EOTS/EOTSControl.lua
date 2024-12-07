@@ -118,6 +118,8 @@ SCR_W = PN("Screen Width")
 HG = PN("Heading Gap")
 HI = PN("Heading Interval")
 HM = PN("Heading Margin")
+FOV_MIN = PN("FOV Min(rad)")
+FOV_MAX = PN("FOV Max(rad)")
 
 TF = false
 -- btns
@@ -135,6 +137,8 @@ CORG = nil
 -- camera orientation local
 CP = { 0, 0 }
 HANG = 0
+-- camera FOV
+FOV = 0
 
 function onTick()
     -- handle touchscreen input
@@ -162,10 +166,11 @@ function onTick()
         CP[2] = as(cameraTargetVectorLocal[2])                             -- pitch
     end
     -- apply mannual control
-    local zoomF = (1 - 0.98 * IN(3) ^ 2)
+    -- calculate current FOV
+    FOV = (FOV_MIN - FOV_MAX) * IN(3) + FOV_MAX
     local mYaw, mPitch = IN(7), IN(8)
-    CP[1] = clamp(CP[1] + mYaw * SEN * zoomF, -YMAX, YMAX)
-    CP[2] = clamp(CP[2] + mPitch * SEN * zoomF, PMIN, PMAX)
+    CP[1] = clamp(CP[1] + mYaw * SEN * FOV, -YMAX, YMAX)
+    CP[2] = clamp(CP[2] + mPitch * SEN * FOV, PMIN, PMAX)
     -- output camera pivot
     ON(1, CP[1] / YBASE)
     ON(2, CP[2] / PBASE)
