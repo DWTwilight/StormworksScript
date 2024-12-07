@@ -181,106 +181,6 @@ function onTick()
     HANG = (m.deg(at(CORG[1], CORG[3])) + 360) % 360
 end
 
-function D0(a, b)
-    DR(a, b, 2, 4)
-end
-
-function D1(a, b)
-    DL(a + 1, b, a + 1, b + 4)
-    DL(a, b + 4, a + 3, b + 4)
-    DL(a, b + 1, a + 1, b + 1)
-end
-
-function D2(a, b)
-    DL(a, b, a + 3, b)
-    DL(a, b + 2, a + 3, b + 2)
-    DL(a, b + 4, a + 3, b + 4)
-    DL(a + 2, b, a + 2, b + 2)
-    DL(a, b + 2, a, b + 4)
-end
-
-function D3(a, b)
-    DL(a, b, a + 3, b)
-    DL(a, b + 2, a + 3, b + 2)
-    DL(a, b + 4, a + 3, b + 4)
-    DL(a + 2, b, a + 2, b + 4)
-end
-
-function D4(a, b)
-    DL(a, b + 2, a + 3, b + 2)
-    DL(a + 2, b, a + 2, b + 5)
-    DL(a, b, a, b + 2)
-end
-
-function D5(a, b)
-    DL(a, b, a + 3, b)
-    DL(a, b + 2, a + 3, b + 2)
-    DL(a, b + 4, a + 3, b + 4)
-    DL(a, b, a, b + 2)
-    DL(a + 2, b + 2, a + 2, b + 4)
-end
-
-function D6(a, b)
-    DR(a, b + 2, 2, 2)
-    DL(a, b, a + 3, b)
-    DL(a, b, a, b + 2)
-end
-
-function D7(a, b)
-    DL(a, b, a + 3, b)
-    DL(a + 2, b, a + 2, b + 5)
-end
-
-function D8(a, b)
-    DR(a, b, 2, 4)
-    DL(a, b + 2, a + 3, b + 2)
-end
-
-function D9(a, b)
-    DR(a, b, 2, 2)
-    DL(a + 2, b, a + 2, b + 5)
-    DL(a, b + 4, a + 3, b + 4)
-end
-
-function dash(a, b)
-    DL(a, b + 2, a + 3, b + 2)
-end
-
-function CST(a, b, s)
-    if s == "0" then
-        D0(a, b)
-    elseif s == "1" then
-        D1(a, b)
-    elseif s == "2" then
-        D2(a, b)
-    elseif s == "3" then
-        D3(a, b)
-    elseif s == "4" then
-        D4(a, b)
-    elseif s == "5" then
-        D5(a, b)
-    elseif s == "6" then
-        D6(a, b)
-    elseif s == "7" then
-        D7(a, b)
-    elseif s == "8" then
-        D8(a, b)
-    elseif s == "9" then
-        D9(a, b)
-    elseif s == "-" then
-        dash(a, b)
-    end
-end
-
-function DST(a, b, c)
-    local l = #c
-    for d = 1, l do
-        local s = c:sub(d, d)
-        CST(a, b, s)
-        a = a + 4
-    end
-end
-
 function onDraw()
     -- draw btns
     for _, btn in ipairs(BTNS) do
@@ -290,8 +190,8 @@ function onDraw()
     SC(UC)
     -- draw current heading
     local h = SF("%.0f", HANG)
-    DST((SCR_W - #h * 4) / 2 + 1, 0, h)
-    DR(SCR_W / 2 - 7, -2, 14, 8)
+    DT((SCR_W - #h * 5) / 2 + 1, 0, h)
+    DR(SCR_W / 2 - 8, -2, 16, 8)
     -- draw scaleplate
     -- left
     for i = (HANG // 1) % HI, 180, HI do
@@ -302,9 +202,9 @@ function onDraw()
         local ch = (HANG - i + 360) % 360
         if (ch // 1) % (2 * HI) == 0 then
             DL(x, 7, x, 9)
-            if SCR_W / 2 - x > 10 then
+            if SCR_W / 2 - x > 11 then
                 local chs = SF("%d", ch // 10)
-                DST(x - #chs * 2 + 1, 0, chs)
+                DT(x - #chs * 2.5 + 1, 0, chs)
             end
         else
             DL(x, 8, x, 9)
@@ -319,9 +219,9 @@ function onDraw()
         local ch = (HANG + i) % 360
         if (ch // 1) % (2 * HI) == 0 then
             DL(x, 7, x, 9)
-            if x - SCR_W / 2 > 10 then
+            if x - SCR_W / 2 > 11 then
                 local chs = SF("%d", ch // 10)
-                DST(x - #chs * 2 + 1, 0, chs)
+                DT(x - #chs * 2.5 + 1, 0, chs)
             end
         else
             DL(x, 8, x, 9)
