@@ -161,9 +161,15 @@ function onTick()
     local B = ERM({ IN(4), IN(6), IN(5) })
     if STA then
         -- stabilizer on
-        local cameraTargetVectorLocal = ER(CORG, B)
-        CP[1] = at(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
-        CP[2] = as(cameraTargetVectorLocal[2])                             -- pitch
+        if IN(9) ~= 0 then
+            -- has locked target
+            CP[1] = IN(10)
+            CP[2] = IN(11)
+        else
+            local cameraTargetVectorLocal = ER(CORG, B)
+            CP[1] = at(cameraTargetVectorLocal[1], cameraTargetVectorLocal[3]) -- yaw
+            CP[2] = as(cameraTargetVectorLocal[2])                             -- pitch
+        end
     end
     -- apply mannual control
     -- calculate current FOV

@@ -74,17 +74,23 @@ function RT(id, x, y, z, f, ttl)
             t.ttlF = ttl
             t.f = f
         end,
-        curPos = function(t)
+        curAbsPos = function(t)
             if t.speedL == nil then
-                return t.pos[1], t.pos[2], t.pos[3]
+                return t.pos[1] + OFFSET_X, t.pos[2] + OFFSET_Y, t.pos[3] + OFFSET_Z
             end
             local totalTickOffset = DELAY_C + t.ttlF - t.ttl
-            return MMul(
-                {
-                    t.pos[1] + t.speedL[1] * totalTickOffset + OFFSET_X,
-                    t.pos[2] + t.speedL[2] * totalTickOffset + OFFSET_Y,
-                    t.pos[3] + t.speedL[3] * totalTickOffset + OFFSET_Z
-                }, CAMERA_COORD_MAT)
+            return
+                t.pos[1] + t.speedL[1] * totalTickOffset + OFFSET_X,
+                t.pos[2] + t.speedL[2] * totalTickOffset + OFFSET_Y,
+                t.pos[3] + t.speedL[3] * totalTickOffset + OFFSET_Z
+        end,
+        curAbsPivot = function(t)
+            local x, y, z = t:curAbsPos()
+            return AT(x, z), AT(y, (x ^ 2 + z ^ 2) ^ 0.5)
+        end,
+        curPos = function(t)
+            local x, y, z = t:curAbsPos()
+            return MMul({ x, y, z }, CAMERA_COORD_MAT)
         end,
         draw = function(t)
             local x, y, z = t:curPos()
@@ -235,9 +241,14 @@ function onTick()
     if LOCK_T == nil then
         ON(1, 0)
         ON(2, 0)
+        ON(3, 0)
+        ON(4, 0)
     else
         ON(1, LOCK_T.lockF == 2 and LOCK_T.id or 0)
         ON(2, LOCK_T.lockF)
+        local absYaw, absPitch = LOCK_T:curAbsPivot()
+        ON(3, absYaw)
+        ON(4, absPitch)
     end
 end
 
