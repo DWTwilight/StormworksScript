@@ -120,6 +120,7 @@ HI = PN("Heading Interval")
 HM = PN("Heading Margin")
 FOV_MIN = PN("FOV Min(rad)")
 FOV_MAX = PN("FOV Max(rad)")
+BASE_FOV = PN("Base FOV")
 
 TF = false
 -- btns
@@ -238,4 +239,7 @@ function onDraw()
             DL(x, 8, x, 9)
         end
     end
+
+    -- draw zoom ratio
+    DT(6, SCR_W - 6, SF("X%.1f", BASE_FOV / FOV))
 end
