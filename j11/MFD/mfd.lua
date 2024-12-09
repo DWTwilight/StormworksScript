@@ -170,10 +170,10 @@ UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
 SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
 
-SELECT_INDEX = 1
+SELECT_INDEX = 2
 TABS = {
-    ToggleButton(SCR_W - 34, SCR_H - 7, 17, 7, "CTRL", UC, UC2, true),
-    ToggleButton(SCR_W - 17, SCR_H - 7, 17, 7, "WEAP", UC, UC2, false) }
+    ToggleButton(SCR_W - 34, SCR_H - 7, 17, 7, "CTRL", UC, UC2, false),
+    ToggleButton(SCR_W - 17, SCR_H - 7, 17, 7, "WEAP", UC, UC2, true) }
 
 function onTick()
     if IB(1) then
