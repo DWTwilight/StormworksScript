@@ -203,7 +203,7 @@ function onDraw()
     -- draw current heading
     local h = SF("%.0f", HANG)
     DT((SCR_W - #h * 5) / 2 + 1, 0, h)
-    DR(SCR_W / 2 - 8, -2, 16, 8)
+    DR(SCR_W / 2 - 9, -2, 17, 8)
     -- draw scaleplate
     -- left
     for i = (HANG // 1) % HI, 180, HI do
@@ -214,7 +214,7 @@ function onDraw()
         local ch = (HANG - i + 360) % 360
         if (ch // 1) % (2 * HI) == 0 then
             DL(x, 7, x, 9)
-            if SCR_W / 2 - x > 11 then
+            if SCR_W / 2 - x > 12 then
                 local chs = SF("%d", ch // 10)
                 DT(x - #chs * 2.5 + 1, 0, chs)
             end
@@ -231,7 +231,7 @@ function onDraw()
         local ch = (HANG + i) % 360
         if (ch // 1) % (2 * HI) == 0 then
             DL(x, 7, x, 9)
-            if x - SCR_W / 2 > 11 then
+            if x - SCR_W / 2 > 12 then
                 local chs = SF("%d", ch // 10)
                 DT(x - #chs * 2.5 + 1, 0, chs)
             end

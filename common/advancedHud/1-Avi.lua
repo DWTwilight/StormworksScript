@@ -7,6 +7,7 @@ TAN = M.tan
 ABS = M.abs
 DEG = M.deg
 RAD = M.rad
+FL = M.floor
 
 IN = input.getNumber
 IB = input.getBool
@@ -53,7 +54,7 @@ OX, OY = 0, 0
 ROLL, PITCH, YAW = 0, 0, 0
 
 function onTick()
-    OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW, -SIN(IN(2) * PI2) * LOF - COY + HSCRW
+    OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
 end
 
@@ -68,15 +69,19 @@ end
 -- (0, 0) is center viewpoint
 function CDL(x1, y1, x2, y2)
     DL(
-        (x1 + OX) // 1,
-        (y1 + OY) // 1,
-        (x2 + OX) // 1,
-        (y2 + OY) // 1
+        FL(x1 + OX),
+        FL(y1 + OY),
+        FL(x2 + OX),
+        FL(y2 + OY)
     )
 end
 
+function CDR(x, y, w, h)
+    DR(FL(x + OX), FL(y + OY), w, h)
+end
+
 function CDT(x, y, t)
-    DT(x + OX, y + OY, t)
+    DT(FL(x + OX), FL(y + OY), t)
 end
 
 -- draw line that converts with current roll
@@ -120,14 +125,16 @@ function DPL(ang)
     elseif ang <= -90 then
         ang = 180 + ang
     end
-    local a, b = 15, 5
-    if ang >= 0 then
+    local a, b = 14, 4
+    if ang == 0 then
+        CDLR(-40, oy, -b, oy)
+        CDLR(40, oy, b, oy)
+        return true
+    elseif ang > 0 then
         CDLR(-a, oy, -b, oy)
         CDLR(a, oy, b, oy)
-        if ang > 0 then
-            CDLR(-a, oy, -a, oy + 3)
-            CDLR(a, oy, a, oy + 3)
-        end
+        CDLR(-a, oy, -a, oy + 3)
+        CDLR(a, oy, a, oy + 3)
     else
         CDDLR(-a, -b, oy, 2)
         CDDLR(a, b, oy, -2)
@@ -135,16 +142,13 @@ function DPL(ang)
         CDLR(a, oy, a, oy - 3)
     end
     -- draw ang text
-    local angText = SF("%d", ang)
-    CDTR(-a - #angText * 5 - 1, oy - 2, angText)
-    CDTR(a + 1, oy - 2, angText)
+    local angText = SF("%d", ABS(ang))
+    CDTR(-a - #angText * 5, oy - 2, angText)
+    CDTR(a + 2, oy - 2, angText)
     return true
 end
 
 function drawHorizon()
-    -- main line
-    CDLR(-30, 0, -10, 0)
-    CDLR(30, 0, 10, 0)
     -- crosshair
     CDL(-2, 0, 0, 0)
     CDL(1, 0, 3, 0)
@@ -166,12 +170,53 @@ function drawHorizon()
     end
 end
 
+-- draw heading line
+function DHL(headingAng, ox, oy)
+    if (headingAng // 1) % 10 == 0 then
+        CDL(ox, oy + 7, ox, oy + 11)
+        if ABS(ox) > 12 then
+            local chs = SF("%d", headingAng // 10)
+            CDT(ox - #chs * 2, oy, chs)
+        end
+    else
+        CDL(ox, oy + 9, ox, oy + 11)
+    end
+end
+
+function drawHeading(oy)
+    local headingAng = (DEG(YAW) + 360) % 360
+    local h = SF("%.0f", headingAng)
+    CDT(FL(#h * -2.5), oy, h)
+    CDR(-10, oy - 2, 17, 8)
+    -- draw scaleplate
+    local headingInterval, headingGap, headingWidth = 5, 10, 35
+    -- left
+    for i = (headingAng // 1) % headingInterval, 180, headingInterval do
+        local x = (-i * headingGap / headingInterval)
+        if x < -headingWidth then
+            break
+        end
+        DHL((headingAng - i + 360) % 360, x, oy)
+    end
+    -- right
+    for i = headingInterval - (headingAng // 1) % headingInterval, 180, headingInterval do
+        local x = (i * headingGap / headingInterval)
+        if x > headingWidth then
+            break
+        end
+        DHL((headingAng + i) % 360, x, oy)
+    end
+end
+
 function onDraw()
     -- draw crosshair
     SC(UC)
 
     -- drawHorizon
     drawHorizon()
+
+    -- drawHeading
+    drawHeading(-70)
 
     -- erase boarder, put in last draw()
     S.setColor(0, 0, 0)
