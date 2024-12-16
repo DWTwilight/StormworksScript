@@ -62,6 +62,7 @@ ROLL, PITCH, YAW, SPD, ALT = 0, 0, 0, 0, 0
 SPDX, SPDY, SPDZ = 0, 0, 0
 THR, VSPD, DTG = 0, 0, 0
 AP = false
+MA, GF = 0, 0
 
 function clamp(v, min, max)
     return MAX(MIN(v, max), min)
@@ -74,6 +75,7 @@ function onTick()
     SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
     THR, VSPD, DTG = IN(11), IN(12) * 60 // 1, IN(13)
     AP = IB(1)
+    MA, GF = IN(14), IN(15)
 end
 
 -- convert screen pos according to roll
@@ -246,6 +248,9 @@ function drawSpeed(ox, oy)
     if AP then
         CDT(ox - 10, oy + 34, "AP")
     end
+    -- draw Mach
+    s = SF("M %.2f", MA)
+    CDT(ox - 15, oy - 34, s)
 end
 
 function drawAlt(ox, oy)
