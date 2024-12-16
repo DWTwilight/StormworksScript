@@ -19,6 +19,7 @@ DC = S.drawCircle
 DT = S.drawText
 DRF = S.drawRectF
 DTAF = S.drawTriangleF
+SSC = S.setColor
 
 P = property
 PN = P.getNumber
@@ -38,7 +39,11 @@ function H2RGB(e)
 end
 
 function SC(c)
-    S.setColor(c.r, c.g, c.b, c.t)
+    if c == nil then
+        SSC(0, 0, 0)
+    else
+        SSC(c.r, c.g, c.b, c.t)
+    end
 end
 
 UC = H2RGB(PT("UI Primary Color"))
@@ -51,11 +56,12 @@ FOV = PN("FOV(rad)")
 SPD = HSCRW / TAN(FOV / 2) -- screen px distance
 
 OX, OY = 0, 0
-ROLL, PITCH, YAW = 0, 0, 0
+ROLL, PITCH, YAW, ASPD = 0, 0, 0, 0
 
 function onTick()
     OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
+    ASPD = IN(6) * 3.6
 end
 
 -- convert screen pos according to roll
@@ -78,6 +84,10 @@ end
 
 function CDR(x, y, w, h)
     DR(FL(x + OX), FL(y + OY), w, h)
+end
+
+function CDRF(x, y, w, h)
+    DRF(FL(x + OX), FL(y + OY), w, h)
 end
 
 function CDT(x, y, t)
@@ -208,6 +218,32 @@ function drawHeading(oy)
     end
 end
 
+function drawSpeed(ox, oy)
+    -- draw scaleplate
+    local speedInt = ASPD // 1
+    for i = speedInt % 2 - 20, 20, 2 do
+        local currentSpeed = speedInt + i
+        local offsetY = (currentSpeed - ASPD) * 1.5
+        if ABS(offsetY) < 25 then
+            local oh = oy - offsetY
+            if currentSpeed % 10 == 0 then
+                CDL(ox, oh, ox - 4, oh)
+                local currentSpeedText = SF("%d", currentSpeed // 10)
+                CDT(ox - 3 - 5 * #currentSpeedText, oh - 2, currentSpeedText)
+            else
+                CDL(ox, oh, ox - 2, oh)
+            end
+        end
+    end
+    -- draw current air speed
+    SC(nil)
+    CDRF(ox - 22, oy - 4, 22, 8)
+    SC(UC)
+    local s = SF("%.0f", ASPD)
+    CDT(ox - 5 * #s, oy - 2, s)
+    CDR(ox - 22, oy - 4, 22, 8)
+end
+
 function onDraw()
     -- draw crosshair
     SC(UC)
@@ -218,8 +254,11 @@ function onDraw()
     -- drawHeading
     drawHeading(-70)
 
+    -- drawSpeed
+    drawSpeed(-50, -15)
+
     -- erase boarder, put in last draw()
-    S.setColor(0, 0, 0)
+    SC(nil)
     DTAF(0, 0, 55, 0, 0, 100)
     DTAF(0, 130, 30, 130, 0, -10)
     DTAF(0, 145, 0, 115, 75, 145)
