@@ -180,48 +180,35 @@ function drawHorizon()
     end
 end
 
--- draw heading line
-function DHL(headingAng, ox, oy)
-    if (headingAng // 1) % 10 == 0 then
-        CDL(ox, oy + 7, ox, oy + 11)
-        if ABS(ox) > 12 then
-            local chs = SF("%d", headingAng // 10)
-            CDT(ox - #chs * 2, oy, chs)
-        end
-    else
-        CDL(ox, oy + 9, ox, oy + 11)
-    end
-end
-
 function drawHeading(oy)
     local headingAng = (DEG(YAW) + 360) % 360
-    local h = SF("%.0f", headingAng)
-    CDT(FL(#h * -2.5), oy, h)
-    CDR(-10, oy - 2, 17, 8)
     -- draw scaleplate
-    local headingInterval, headingGap, headingWidth = 5, 10, 35
-    -- left
-    for i = (headingAng // 1) % headingInterval, 180, headingInterval do
-        local x = (-i * headingGap / headingInterval)
-        if x < -headingWidth then
-            break
+    for i = -20 - (headingAng // 1) % 5, 25, 5 do
+        local ox = 2 * i
+        if ABS(ox) < 35 then
+            local curAng = ((headingAng + i) % 360) // 1
+            if curAng % 10 == 0 then
+                CDL(ox, oy + 7, ox, oy + 11)
+                local currentHeadingText = SF("%d", curAng // 10)
+                CDT(ox - #currentHeadingText * 2, oy, currentHeadingText)
+            else
+                CDL(ox, oy + 9, ox, oy + 11)
+            end
         end
-        DHL((headingAng - i + 360) % 360, x, oy)
     end
-    -- right
-    for i = headingInterval - (headingAng // 1) % headingInterval, 180, headingInterval do
-        local x = (i * headingGap / headingInterval)
-        if x > headingWidth then
-            break
-        end
-        DHL((headingAng + i) % 360, x, oy)
-    end
+    -- draw current headingAng
+    SC(nil)
+    CDRF(-8, oy - 2, 17, 8)
+    SC(UC)
+    local h = SF("%.0f", headingAng)
+    CDT(#h * -2, oy, h)
+    CDR(-8, oy - 2, 17, 8)
 end
 
 function drawSpeed(ox, oy)
-    -- draw scaleplate
     local speedInt = ASPD // 1
-    for i = speedInt % 2 - 20, 20, 2 do
+    -- draw scaleplate
+    for i = speedInt % 2 - 20, 22, 2 do
         local currentSpeed = speedInt + i
         local offsetY = (currentSpeed - ASPD) * 1.5
         if ABS(offsetY) < 25 then
