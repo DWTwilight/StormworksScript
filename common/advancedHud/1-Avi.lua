@@ -56,12 +56,12 @@ FOV = PN("FOV(rad)")
 SPD = HSCRW / TAN(FOV / 2) -- screen px distance
 
 OX, OY = 0, 0
-ROLL, PITCH, YAW, ASPD = 0, 0, 0, 0
+ROLL, PITCH, YAW, ASPD, ALT = 0, 0, 0, 0, 0
 
 function onTick()
     OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
-    ASPD = IN(6) * 3.6
+    ASPD, ALT = IN(6) * 3.6, IN(7)
 end
 
 -- convert screen pos according to roll
@@ -133,7 +133,7 @@ function drawHorizon()
         local ang = pi + d
         local oy = -TAN(RAD(ang) - PITCH) * SPD
         -- check if if outof boundray
-        if ABS(oy) < 52 then
+        if ABS(oy) < 54 then
             -- convert ang to (-90, 90]
             if ang > 90 then
                 ang = ang - 180
@@ -216,18 +216,46 @@ function drawSpeed(ox, oy)
     CDR(ox - 22, oy - 4, 22, 8)
 end
 
+function drawAlt(ox, oy)
+    local altInt = ALT // 1
+    -- draw scaleplate
+    for i = -200 - altInt % 20, 220, 20 do
+        local currentAlt = altInt + i
+        local offsetY = (currentAlt - ALT) * 0.15
+        if ABS(offsetY) < 25 then
+            local oh = oy - offsetY
+            if currentAlt % 100 == 0 then
+                CDL(ox, oh, ox + 4, oh)
+                local currentAltText = SF("%d", currentAlt // 100)
+                CDT(ox + 5, oh - 2, currentAltText)
+            else
+                CDL(ox, oh, ox + 2, oh)
+            end
+        end
+    end
+    -- draw current altitude
+    SC(nil)
+    CDRF(ox, oy - 4, 26, 8)
+    SC(UC)
+    local s = SF("%.0f", ALT)
+    CDT(ox + 2, oy - 2, s)
+    CDR(ox, oy - 4, 26, 8)
+end
+
 function onDraw()
-    -- draw crosshair
     SC(UC)
 
-    -- drawHorizon
+    -- draw horizon
     drawHorizon()
 
-    -- drawHeading
+    -- draw heading
     drawHeading(-70)
 
-    -- drawSpeed
+    -- draw air speed
     drawSpeed(-50, -15)
+
+    -- draw altitude
+    drawAlt(50, -15)
 
     -- erase boarder, put in last draw()
     SC(nil)
