@@ -8,6 +8,7 @@ ABS = M.abs
 DEG = M.deg
 RAD = M.rad
 FL = M.floor
+MAX = M.max
 
 IN = input.getNumber
 IB = input.getBool
@@ -53,15 +54,17 @@ LOF = PN("Look Offset Factor")
 LOXF = PN("Look Offset X Factor")
 COY = PN("Center Offset Y")
 FOV = PN("FOV(rad)")
-SPD = HSCRW / TAN(FOV / 2) -- screen px distance
+SDP = HSCRW / TAN(FOV / 2) -- screen px distance
 
 OX, OY = 0, 0
-ROLL, PITCH, YAW, ASPD, ALT = 0, 0, 0, 0, 0
+ROLL, PITCH, YAW, SPD, ALT = 0, 0, 0, 0, 0
+SPDX, SPDY, SPDZ = 0, 0, 0
 
 function onTick()
     OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
-    ASPD, ALT = IN(6) * 3.6, IN(7)
+    SPD, ALT = IN(6) * 3.6, IN(7)
+    SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
 end
 
 -- convert screen pos according to roll
@@ -92,6 +95,10 @@ end
 
 function CDT(x, y, t)
     DT(FL(x + OX), FL(y + OY), t)
+end
+
+function CDC(x, y, r)
+    DC(FL(x + OX), FL(y + OY), r)
 end
 
 -- draw line that converts with current roll
@@ -131,7 +138,7 @@ function drawHorizon()
     -- up
     for d = -15 - pi % 5, 20, 5 do
         local ang = pi + d
-        local oy = -TAN(RAD(ang) - PITCH) * SPD
+        local oy = -TAN(RAD(ang) - PITCH) * SDP
         -- check if if outof boundray
         if ABS(oy) < 54 then
             -- convert ang to (-90, 90]
@@ -191,11 +198,11 @@ function drawHeading(oy)
 end
 
 function drawSpeed(ox, oy)
-    local speedInt = ASPD // 1
+    local speedInt = SPD // 1
     -- draw scaleplate
     for i = -20 - speedInt % 2, 22, 2 do
         local currentSpeed = speedInt + i
-        local offsetY = (currentSpeed - ASPD) * 1.5
+        local offsetY = (currentSpeed - SPD) * 1.5
         if ABS(offsetY) < 25 then
             local oh = oy - offsetY
             if currentSpeed % 10 == 0 then
@@ -211,9 +218,17 @@ function drawSpeed(ox, oy)
     SC(nil)
     CDRF(ox - 22, oy - 4, 22, 8)
     SC(UC)
-    local s = SF("%.0f", ASPD)
+    local s = SF("%d", speedInt)
     CDT(ox - 5 * #s, oy - 2, s)
     CDR(ox - 22, oy - 4, 22, 8)
+    -- draw speed vector
+    local svOx, svOy =
+        SDP / SPDZ * SPDX,
+        -SDP / (SPDZ ^ 2 + SPDX ^ 2) ^ 0.5 * SPDY
+    CDC(svOx, svOy, 3)
+    CDL(svOx, svOy - 3, svOx, svOy - 6)
+    CDL(svOx - 3, svOy, svOx - 6, svOy)
+    CDL(svOx + 3, svOy, svOx + 6, svOy)
 end
 
 function drawAlt(ox, oy)
@@ -237,7 +252,7 @@ function drawAlt(ox, oy)
     SC(nil)
     CDRF(ox, oy - 4, 26, 8)
     SC(UC)
-    local s = SF("%.0f", ALT)
+    local s = SF("%d", altInt)
     CDT(ox + 2, oy - 2, s)
     CDR(ox, oy - 4, 26, 8)
 end
