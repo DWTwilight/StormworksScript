@@ -9,6 +9,7 @@ DEG = M.deg
 RAD = M.rad
 FL = M.floor
 MAX = M.max
+MIN = M.min
 
 IN = input.getNumber
 IB = input.getBool
@@ -60,13 +61,19 @@ OX, OY = 0, 0
 ROLL, PITCH, YAW, SPD, ALT = 0, 0, 0, 0, 0
 SPDX, SPDY, SPDZ = 0, 0, 0
 THR, VSPD, DTG = 0, 0, 0
+AP = false
+
+function clamp(v, min, max)
+    return MAX(MIN(v, max), min)
+end
 
 function onTick()
     OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
     SPD, ALT = IN(6) * 3.6, IN(7)
     SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
-    THR, VSPD, DTG = IN(11), IN(12), IN(13)
+    THR, VSPD, DTG = IN(11), IN(12) * 60 // 1, IN(13)
+    AP = IB(1)
 end
 
 -- convert screen pos according to roll
@@ -233,9 +240,12 @@ function drawSpeed(ox, oy)
     CDL(svOx + 3, svOy, svOx + 6, svOy)
     -- draw throttle
     s = SF("%.0f", THR * 100)
-    CDT(ox + 5 - 5 * #s, oy + 27, s)
-    local height = 51 * THR // 1
-    CDRF(ox + 1, oy + 26 - height, 2, height)
+    CDT(ox + 5 - 5 * #s, oy + 28, s)
+    CDRF(ox + 1, oy + 26, 2, -51 * THR)
+    -- draw AP
+    if AP then
+        CDT(ox - 10, oy + 34, "AP")
+    end
 end
 
 function drawAlt(ox, oy)
@@ -262,6 +272,14 @@ function drawAlt(ox, oy)
     local s = SF("%d", altInt)
     CDT(ox + 2, oy - 2, s)
     CDR(ox, oy - 4, 26, 8)
+    -- draw vertical speed
+    s = SF("%d", VSPD)
+    CDT(ox - (VSPD < 0 and 8 or 3), oy + 28, s)
+    CDRF(ox - 2, oy + (VSPD > 0 and 1 or 0), 2, -26 * clamp(VSPD / 50, -1, 1))
+    -- draw distance to ground
+    if DTG < 500 then
+        CDT(ox + 2, oy + 34, SF("%.0f", DTG))
+    end
 end
 
 function onDraw()

@@ -144,7 +144,7 @@ function onTick()
     ON(20, IN(20))
     ON(21, dtg)
     ON(22, (airSpeed ^ 2 + airSpeedY ^ 2) ^ 0.5) -- absolute airSpeed
-    ON(23, 0)                                    -- reserved
+    ON(23, IN(29))                               -- tempreture
     ON(24, IN(24))
     ON(25, IN(26))
     ON(26, GLOBAL_WIND_SPEEDX)
