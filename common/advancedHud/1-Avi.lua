@@ -120,44 +120,6 @@ function CDTR(x, y, t)
     CDT(x, y, t)
 end
 
--- draw pitch line
--- ang: integer
-function DPL(ang)
-    -- calculate pitchLine y offset
-    local oy = -TAN(RAD(ang) - PITCH) * SPD
-    -- check if if outof boundray
-    if ABS(oy) > 50 then
-        return false
-    end
-    -- convert ang to (-90, 90]
-    if ang > 90 then
-        ang = ang - 180
-    elseif ang <= -90 then
-        ang = 180 + ang
-    end
-    local a, b = 14, 4
-    if ang == 0 then
-        CDLR(-40, oy, -b, oy)
-        CDLR(40, oy, b, oy)
-        return true
-    elseif ang > 0 then
-        CDLR(-a, oy, -b, oy)
-        CDLR(a, oy, b, oy)
-        CDLR(-a, oy, -a, oy + 3)
-        CDLR(a, oy, a, oy + 3)
-    else
-        CDDLR(-a, -b, oy, 2)
-        CDDLR(a, b, oy, -2)
-        CDLR(-a, oy, -a, oy - 3)
-        CDLR(a, oy, a, oy - 3)
-    end
-    -- draw ang text
-    local angText = SF("%d", ABS(ang))
-    CDTR(-a - #angText * 5, oy - 2, angText)
-    CDTR(a + 2, oy - 2, angText)
-    return true
-end
-
 function drawHorizon()
     -- crosshair
     CDL(-2, 0, 0, 0)
@@ -167,15 +129,38 @@ function drawHorizon()
     -- draw scaleplate
     local pi = DEG(PITCH) // 1
     -- up
-    for d = 5 - pi % 5, 90, 5 do
-        if not DPL(pi + d) then
-            break
-        end
-    end
-    -- down
-    for d = pi % 5, 90, 5 do
-        if not DPL(pi - d) then
-            break
+    for d = -15 - pi % 5, 20, 5 do
+        local ang = pi + d
+        local oy = -TAN(RAD(ang) - PITCH) * SPD
+        -- check if if outof boundray
+        if ABS(oy) < 52 then
+            -- convert ang to (-90, 90]
+            if ang > 90 then
+                ang = ang - 180
+            elseif ang <= -90 then
+                ang = 180 + ang
+            end
+            local a, b = 14, 4
+            if ang == 0 then
+                CDLR(-40, oy, -b, oy)
+                CDLR(40, oy, b, oy)
+            else
+                if ang > 0 then
+                    CDLR(-a, oy, -b, oy)
+                    CDLR(a, oy, b, oy)
+                    CDLR(-a, oy, -a, oy + 3)
+                    CDLR(a, oy, a, oy + 3)
+                else
+                    CDDLR(-a, -b, oy, 2)
+                    CDDLR(a, b, oy, -2)
+                    CDLR(-a, oy, -a, oy - 3)
+                    CDLR(a, oy, a, oy - 3)
+                end
+                -- draw ang text
+                local angText = SF("%d", ABS(ang))
+                CDTR(-a - #angText * 5, oy - 2, angText)
+                CDTR(a + 2, oy - 2, angText)
+            end
         end
     end
 end
@@ -208,7 +193,7 @@ end
 function drawSpeed(ox, oy)
     local speedInt = ASPD // 1
     -- draw scaleplate
-    for i = speedInt % 2 - 20, 22, 2 do
+    for i = -20 - speedInt % 2, 22, 2 do
         local currentSpeed = speedInt + i
         local offsetY = (currentSpeed - ASPD) * 1.5
         if ABS(offsetY) < 25 then
