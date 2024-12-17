@@ -13,6 +13,7 @@ MIN = M.min
 
 IN = input.getNumber
 IB = input.getBool
+ON = output.setNumber
 
 S = screen
 DL = S.drawLine
@@ -20,7 +21,6 @@ DR = S.drawRect
 DC = S.drawCircle
 DT = S.drawText
 DRF = S.drawRectF
-DTAF = S.drawTriangleF
 SSC = S.setColor
 
 P = property
@@ -55,6 +55,8 @@ LOF = PN("Look Offset Factor")
 LOXF = PN("Look Offset X Factor")
 COY = PN("Center Offset Y")
 FOV = PN("FOV(rad)")
+CPOF = PN("Camera Pivot Offset Factor")
+CPOY = PN("Camera Pivot Offset Y")
 SDP = HSCRW / TAN(FOV / 2) -- screen px distance
 
 OX, OY = 0, 0
@@ -69,6 +71,9 @@ function clamp(v, min, max)
 end
 
 function onTick()
+    -- IR camera pivots
+    ON(1, SIN(IN(1) * PI2) * CPOF * LOXF)
+    ON(2, SIN(IN(2) * PI2) * CPOF + CPOY)
     OX, OY = SIN(IN(1) * PI2) * LOF * LOXF + HSCRW + 0.5, -SIN(IN(2) * PI2) * LOF - COY + HSCRW + 0.5
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
     SPD, ALT = IN(6) * 3.6, IN(7)
@@ -101,17 +106,6 @@ end
 
 function CDRF(x, y, w, h)
     DRF(FL(x + OX), FL(y + OY), w, h)
-end
-
-function CDTAF(x1, y1, x2, y2, x3, y3)
-    DTAF(
-        FL(x1 + OX),
-        FL(y1 + OY),
-        FL(x2 + OX),
-        FL(y2 + OY),
-        FL(x3 + OX),
-        FL(y3 + OY)
-    )
 end
 
 function CDT(x, y, t)
@@ -314,11 +308,9 @@ function DBA(radius)
     -- draw current roll
     local limit = RAD(60)
     if BLK or ABS(ROLL) <= limit then
-        local x1, y1, x2, y2, x3, y3, rotaion = 0, radius + 2, -2, radius + 6, 3, radius + 6, -clamp(ROLL, -limit, limit)
-        x1, y1 = rollR(x1, y1, rotaion)
-        x2, y2 = rollR(x2, y2, rotaion)
-        x3, y3 = rollR(x3, y3, rotaion)
-        CDTAF(x2, y2, x1, y1, x3, y3)
+        local x1, y1, rotaion = 0, radius + 2, -clamp(ROLL, -limit, limit)
+        CDLRR(x1, y1, -2, radius + 6, rotaion)
+        CDLRR(x1, y1, 3, radius + 6, rotaion)
     end
 end
 
