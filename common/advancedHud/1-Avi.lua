@@ -61,7 +61,7 @@ OX, OY = 0, 0
 ROLL, PITCH, YAW, SPD, ALT = 0, 0, 0, 0, 0
 SPDX, SPDY, SPDZ = 0, 0, 0
 THR, VSPD, DTG = 0, 0, 0
-AP = false
+AP, BLK = false, false
 MA, FUEL = 0, 0
 
 function clamp(v, min, max)
@@ -74,16 +74,15 @@ function onTick()
     SPD, ALT = IN(6) * 3.6, IN(7)
     SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
     THR, VSPD, DTG = IN(11), IN(12) * 60 // 1, IN(13)
-    AP = IB(1)
+    AP, BLK = IB(1), IB(2)
     MA, FUEL = IN(14), IN(15)
 end
 
 -- convert screen pos according to roll
-function rollR(x, y)
-    local r = -ROLL
+function rollR(x, y, rotation)
     return
-        x * COS(r) - y * SIN(r),
-        x * SIN(r) + y * COS(r)
+        x * COS(rotation) - y * SIN(rotation),
+        x * SIN(rotation) + y * COS(rotation)
 end
 
 -- (0, 0) is center viewpoint
@@ -104,6 +103,17 @@ function CDRF(x, y, w, h)
     DRF(FL(x + OX), FL(y + OY), w, h)
 end
 
+function CDTAF(x1, y1, x2, y2, x3, y3)
+    DTAF(
+        FL(x1 + OX),
+        FL(y1 + OY),
+        FL(x2 + OX),
+        FL(y2 + OY),
+        FL(x3 + OX),
+        FL(y3 + OY)
+    )
+end
+
 function CDT(x, y, t)
     DT(FL(x + OX), FL(y + OY), t)
 end
@@ -114,8 +124,12 @@ end
 
 -- draw line that converts with current roll
 function CDLR(x1, y1, x2, y2)
-    x1, y1 = rollR(x1, y1)
-    x2, y2 = rollR(x2, y2)
+    CDLRR(x1, y1, x2, y2, -ROLL)
+end
+
+function CDLRR(x1, y1, x2, y2, rotation)
+    x1, y1 = rollR(x1, y1, rotation)
+    x2, y2 = rollR(x2, y2, rotation)
     CDL(x1, y1, x2, y2)
 end
 
@@ -130,7 +144,7 @@ end
 -- draw text that converts with current roll
 function CDTR(x, y, t)
     -- get text center
-    x, y = rollR(x + #t * 2, y + 2)
+    x, y = rollR(x + #t * 2, y + 2, -ROLL)
     -- convert back to drawText coord
     x = x - #t * 2
     y = y - 2
@@ -138,7 +152,7 @@ function CDTR(x, y, t)
     CDT(x, y, t)
 end
 
-function drawHorizon()
+function DHOR()
     -- crosshair
     CDL(-2, 0, 0, 0)
     CDL(1, 0, 3, 0)
@@ -183,7 +197,7 @@ function drawHorizon()
     end
 end
 
-function drawHeading(oy)
+function DHEAD(oy)
     local headingAng = (DEG(YAW) + 360) % 360
     -- draw scaleplate
     for i = -20 - (headingAng // 1) % 5, 25, 5 do
@@ -208,7 +222,7 @@ function drawHeading(oy)
     CDR(-8, oy - 2, 17, 8)
 end
 
-function drawSpeed(ox, oy)
+function DSPD(ox, oy)
     local speedInt = SPD // 1
     -- draw scaleplate
     for i = -20 - speedInt % 2, 22, 2 do
@@ -233,13 +247,17 @@ function drawSpeed(ox, oy)
     CDT(ox - 5 * #s, oy - 2, s)
     CDR(ox - 22, oy - 4, 22, 8)
     -- draw speed vector
-    local svOx, svOy =
-        SDP / SPDZ * SPDX,
-        -SDP / (SPDZ ^ 2 + SPDX ^ 2) ^ 0.5 * SPDY
-    CDC(svOx, svOy, 3)
-    CDL(svOx, svOy - 3, svOx, svOy - 6)
-    CDL(svOx - 3, svOy, svOx - 6, svOy)
-    CDL(svOx + 3, svOy, svOx + 6, svOy)
+    local svOLimitX, svOLimitY = 60, 40
+    local svOx, svOy = SDP / SPDZ * SPDX, -SDP / SPDZ * SPDY
+    if BLK or (ABS(svOx) < svOLimitX and ABS(svOy) < svOLimitY) then
+        svOx, svOy =
+            clamp(svOx, -svOLimitX, svOLimitX),
+            clamp(svOy, -svOLimitY, svOLimitY)
+        CDC(svOx, svOy, 3)
+        CDL(svOx, svOy - 3, svOx, svOy - 6)
+        CDL(svOx - 3, svOy, svOx - 6, svOy)
+        CDL(svOx + 3, svOy, svOx + 6, svOy)
+    end
     -- draw throttle
     s = SF("%.0f", THR * 100)
     CDT(ox + 5 - 5 * #s, oy + 28, s)
@@ -252,7 +270,7 @@ function drawSpeed(ox, oy)
     CDT(ox - 20, oy - 34, SF("M %.2f", MA))
 end
 
-function drawAlt(ox, oy)
+function DALT(ox, oy)
     local altInt = ALT // 1
     -- draw scaleplate
     for i = -200 - altInt % 20, 220, 20 do
@@ -288,18 +306,37 @@ function drawAlt(ox, oy)
     CDT(ox - 5, oy - 34, SF("+%.0f", FUEL))
 end
 
+function DBA(radius)
+    -- draw scaleplate
+    for i = -60, 60, 15 do
+        CDLRR(0, radius, 0, radius - (i % 30 == 0 and 4 or 2), RAD(i))
+    end
+    -- draw current roll
+    local limit = RAD(60)
+    if BLK or ABS(ROLL) <= limit then
+        local x1, y1, x2, y2, x3, y3, rotaion = 0, radius + 2, -2, radius + 6, 3, radius + 6, -clamp(ROLL, -limit, limit)
+        x1, y1 = rollR(x1, y1, rotaion)
+        x2, y2 = rollR(x2, y2, rotaion)
+        x3, y3 = rollR(x3, y3, rotaion)
+        CDTAF(x2, y2, x1, y1, x3, y3)
+    end
+end
+
 function onDraw()
     SC(UC)
 
     -- draw horizon
-    drawHorizon()
+    DHOR()
+
+    -- draw bank angle
+    DBA(36)
 
     -- draw heading
-    drawHeading(-70)
+    DHEAD(-70)
 
     -- draw air speed
-    drawSpeed(-50, -15)
+    DSPD(-50, -15)
 
     -- draw altitude
-    drawAlt(50, -15)
+    DALT(50, -15)
 end
