@@ -9,6 +9,7 @@ S = screen
 DL = S.drawLine
 DR = S.drawRect
 DC = S.drawCircle
+DT = S.drawText
 
 IN = input.getNumber
 IB = input.getBool
@@ -117,7 +118,9 @@ function RT(id, x, y, z, f, ttl)
                     DL(sx, sy, sx + RTW + 1, sy + RTW + 1)
                     DL(sx + RTW + 1, sy, sx, sy + RTW + 1)
                 end
-                -- TODO: draw distance
+                -- draw distance
+                local distanceText = string.format("%.1f", (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 / 1000)
+                DT(sx - #distanceText * 2.5 + 4, sy + RTW + 3, distanceText)
             end
         end,
         canLock = function(t, la)
