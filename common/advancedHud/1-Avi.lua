@@ -62,7 +62,7 @@ ROLL, PITCH, YAW, SPD, ALT = 0, 0, 0, 0, 0
 SPDX, SPDY, SPDZ = 0, 0, 0
 THR, VSPD, DTG = 0, 0, 0
 AP = false
-MA, GF = 0, 0
+MA, FUEL = 0, 0
 
 function clamp(v, min, max)
     return MAX(MIN(v, max), min)
@@ -75,7 +75,7 @@ function onTick()
     SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
     THR, VSPD, DTG = IN(11), IN(12) * 60 // 1, IN(13)
     AP = IB(1)
-    MA, GF = IN(14), IN(15)
+    MA, FUEL = IN(14), IN(15)
 end
 
 -- convert screen pos according to roll
@@ -249,8 +249,7 @@ function drawSpeed(ox, oy)
         CDT(ox - 10, oy + 34, "AP")
     end
     -- draw Mach
-    s = SF("M %.2f", MA)
-    CDT(ox - 15, oy - 34, s)
+    CDT(ox - 20, oy - 34, SF("M %.2f", MA))
 end
 
 function drawAlt(ox, oy)
@@ -285,6 +284,8 @@ function drawAlt(ox, oy)
     if DTG < 500 then
         CDT(ox + 2, oy + 34, SF("%.0f", DTG))
     end
+    -- draw fuel level
+    CDT(ox - 5, oy - 34, SF("+%.0f", FUEL))
 end
 
 function onDraw()
