@@ -12,6 +12,7 @@ DR = S.drawRect
 DC = S.drawCircle
 DRF = S.drawRectF
 DTAF = S.drawTriangleF
+DT = S.drawText
 
 IN = input.getNumber
 IB = input.getBool
@@ -54,6 +55,10 @@ end
 
 function CDC(x, y, r)
     DC(FL(x + OX), FL(y + OY), r)
+end
+
+function CDT(x, y, t)
+    DT(FL(x + OX), FL(y + OY), t)
 end
 
 function RT(id, x, y, z, f, ttl)
@@ -107,6 +112,9 @@ function RT(id, x, y, z, f, ttl)
                         CDL(ox, oy, sx + HRTW, sy + HRTW)
                         CDC(ox, oy, 3)
                     end
+                    -- draw distance
+                    local distanceText = string.format("%.1f", (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 / 1000)
+                    CDT(sx - #distanceText * 2.5 + 4, sy + RTW + 3, distanceText)
                 end
 
                 CDR(sx, sy, RTW + 1, RTW + 1)
@@ -120,7 +128,7 @@ function RT(id, x, y, z, f, ttl)
             local x, y, z = t:curPos(DELAY_C)
             if z > 0 and (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 <= RANGE * 1000 then
                 local a = AT((x ^ 2 + y ^ 2) ^ 0.5, z)
-                return a < t.lockF == 2 and LA * 4 or LA, a
+                return a < t.lockF == 2 and FOV or FOV * LA, a
             end
             return false, 0
         end
@@ -135,7 +143,7 @@ LOXF = PN("Look Offset X Factor")
 COY = PN("Center Offset Y")
 FOV = PN("FOV(rad)")
 RTW = PN("Rardar Target Width")
-LA = PN("Lock Angle(rad)")
+LA = PN("Lock Angle Portion")
 HRTW = RTW // 2
 SDP = HSCRW / TAN(FOV / 2) -- screen px distance
 
@@ -204,7 +212,7 @@ function onTick()
             end
         else
             -- update current lockable target
-            local minA = LA
+            local minA = LA * FOV
             local lockableTarget = nil
             for _, t in pairs(RTS) do
                 local canLock, a = t:canLock()
