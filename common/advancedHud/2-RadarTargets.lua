@@ -5,6 +5,8 @@ TAN = M.tan
 AT = M.atan
 SIN = M.sin
 FL = M.floor
+DEG = M.deg
+ABS = M.abs
 
 S = screen
 DL = S.drawLine
@@ -25,6 +27,8 @@ PT = P.getText
 
 PR = pairs
 IPR = ipairs
+
+SF = string.format
 
 function H2RGB(e)
     e = e:gsub("#", "")
@@ -113,7 +117,7 @@ function RT(id, x, y, z, f, ttl)
                         CDC(ox, oy, 3)
                     end
                     -- draw distance
-                    local distanceText = string.format("%.1f", (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 / 1000)
+                    local distanceText = SF("%.1f", (x ^ 2 + y ^ 2 + z ^ 2) ^ 0.5 / 1000)
                     CDT(sx - #distanceText * 2.5 + 4, sy + RTW + 3, distanceText)
                 end
 
@@ -152,14 +156,20 @@ UC2 = H2RGB(PT("UI Secondary Color"))
 
 OX, OY = 0, 0
 RTS = {}
-LOCK_T = nil
+LOCKT = nil
 RANGE = 0
-LOCKB = false
+LOCKB, BLK = false, false
 
 BC_REACHABLE = false
 BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
 
+-- waypoint info
+WPD, WPH, YAW = -1, 0, 0
+
 function onTick()
+    WPD, WPH, YAW = IN(15), IN(16), IN(17)
+    BLK = IB(8)
+
     BC_REACHABLE = false
     BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
 
@@ -190,8 +200,8 @@ function onTick()
     end
     for _, id in IPR(toRM) do
         RTS[id] = nil
-        if LOCK_T ~= nil and id == LOCK_T.id then
-            LOCK_T = nil
+        if LOCKT ~= nil and id == LOCKT.id then
+            LOCKT = nil
         end
     end
 
@@ -202,13 +212,13 @@ function onTick()
         RANGE = curVid == 1 and 4 or 200
 
         -- update current lock status
-        if LOCK_T ~= nil and LOCK_T.lockF == 2 then
+        if LOCKT ~= nil and LOCKT.lockF == 2 then
             -- have a locked target
-            local canLock, _ = LOCK_T:canLock()
+            local canLock, _ = LOCKT:canLock()
             if IB(5) or not canLock then
                 -- cancel lock
-                LOCK_T.lockF = 0
-                LOCK_T = nil
+                LOCKT.lockF = 0
+                LOCKT = nil
             end
         else
             -- update current lockable target
@@ -223,35 +233,35 @@ function onTick()
             end
             if lockableTarget ~= nil then
                 -- replace lockT
-                if LOCK_T ~= nil and LOCK_T.id ~= lockableTarget.id then
-                    LOCK_T.lockF = 0
+                if LOCKT ~= nil and LOCKT.id ~= lockableTarget.id then
+                    LOCKT.lockF = 0
                 end
-                LOCK_T = lockableTarget
-                LOCK_T.lockF = 1
-            elseif LOCK_T ~= nil then
+                LOCKT = lockableTarget
+                LOCKT.lockF = 1
+            elseif LOCKT ~= nil then
                 -- cancel locking
-                LOCK_T.lockF = 0
-                LOCK_T = nil
+                LOCKT.lockF = 0
+                LOCKT = nil
             end
 
             -- handle lock pulse
-            if LOCK_T ~= nil and IB(5) then
-                LOCK_T.lockF = 2
+            if LOCKT ~= nil and IB(5) then
+                LOCKT.lockF = 2
             end
         end
     else
-        if LOCK_T ~= nil then
+        if LOCKT ~= nil then
             -- cancel locking
-            LOCK_T.lockF = 0
-            LOCK_T = nil
+            LOCKT.lockF = 0
+            LOCKT = nil
         end
     end
-    if LOCK_T == nil then
+    if LOCKT == nil then
         ON(1, 0)
         ON(2, 0)
     else
-        ON(1, LOCK_T.lockF == 2 and LOCK_T.id or 0)
-        ON(2, LOCK_T.lockF)
+        ON(1, LOCKT.lockF == 2 and LOCKT.id or 0)
+        ON(2, LOCKT.lockF)
         ON(18, curVid)
         if curVid == 1 then
             -- get bc data
@@ -262,9 +272,28 @@ function onTick()
 end
 
 function onDraw()
-    if LOCK_T ~= nil and LOCK_T.lockF == 2 then
+    -- draw waypoint
+    if WPD > 0 then
+        local yawDiff = WPH - YAW
+        if yawDiff > PI then
+            yawDiff = yawDiff - PI2
+        elseif yawDiff < -PI then
+            yawDiff = yawDiff + PI2
+        end
+        local ox, oy, limit = DEG(yawDiff) * 2, -70, 35
+        if BLK or ABS(ox) <= limit then
+            SC(UC)
+            ox = M.min(limit, M.max(ox, -limit))
+            CDL(ox, oy + 13, ox - 2, oy + 17)
+            CDL(ox, oy + 13, ox + 3, oy + 17)
+            local distText = SF("%.1f", WPD / 1000)
+            CDT(ox - #distText * 2.5 + 2, oy + 19, distText)
+        end
+    end
+
+    if LOCKT ~= nil and LOCKT.lockF == 2 then
         -- only draw locked target
-        LOCK_T:draw()
+        LOCKT:draw()
     else
         -- draw radar targets
         for _, t in PR(RTS) do

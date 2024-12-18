@@ -83,7 +83,7 @@ function tar(x, y, z, id, ttl, f)
         f = f,
         pressed = false,
         press = function(t, tx, ty)
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, t.x, t.z)
+            local sx, sy = M2S(MX, MY, ZOOM, SCRW, SCRH, t.x, t.z)
             if PIR(tx, ty, sx - HWPW - 1, sy - HWPW - 1, WPW + 2, WPW + 2) then
                 t.pressed = not t.pressed
                 return true
@@ -92,7 +92,7 @@ function tar(x, y, z, id, ttl, f)
         end,
         draw = function(t)
             -- get screen pos
-            local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, t.x, t.z)
+            local sx, sy = M2S(MX, MY, ZOOM, SCRW, SCRH, t.x, t.z)
             if t.id == nil then
                 SC(t.pressed and WPC2 or WPC)
             else
@@ -107,7 +107,7 @@ function tar(x, y, z, id, ttl, f)
     }
 end
 
-SCR_W, SCR_H = PN("Screen Width"), PN("Screen Height")
+SCRW, SCRH = PN("Screen Width"), PN("Screen Height")
 UC = H2RGB(PT("Basic Primary Color"))
 UC2 = H2RGB(PT("Basic Secondary Color"))
 WPC = H2RGB(PT("Waypoint Color"))
@@ -121,16 +121,16 @@ MX, MY, ZOOM = 0, 0, 0 -- mapPosX, mapPosY, mapZoom, zoom value
 X, Y = 0, 0            -- vehicleX, vehicleY
 WPS = {}
 RTS = {}
-S_T = nil
-FCS_M = false
+ST = nil
+FCSM = false
 
 AWPB = PBTN(2, 2, 18, 9, "+WP", WPC, WPC2, true, 2, 2)
 CLRB = PBTN(22, 2, 18, 9, "CLR", DELC, WPC2, false, 2, 2)
-FCSB = PBTN(2, SCR_H - 22, 18, 9, "FCS", UC, UC2, false, 2, 2)
-RMB = PBTN(2, SCR_H - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
+FCSB = PBTN(2, SCRH - 22, 18, 9, "FCS", UC, UC2, false, 2, 2)
+RMB = PBTN(2, SCRH - 11, 13, 9, "RM", DELC, WPC2, false, 2, 2)
 BTNS = { AWPB, CLRB, FCSB, RMB }
 
-function findWP(x, y)
+function fWP(x, y)
     for i, wp in ipairs(WPS) do
         if wp.x == x and wp.z == y then
             return i, wp
@@ -173,9 +173,9 @@ function onTick()
     end
     for _, id in ipairs(toRM) do
         RTS[id] = nil
-        if S_T ~= nil and S_T.id == id then
+        if ST ~= nil and ST.id == id then
             -- clear selected
-            S_T = nil
+            ST = nil
         end
     end
 
@@ -185,9 +185,9 @@ function onTick()
     -- set clear btn visible or not
     CLRB.v = #WPS > 0
     -- set focus btn visible or not
-    FCSB.v = S_T ~= nil and not FCS_M
+    FCSB.v = ST ~= nil and not FCSM
     -- set rm btn visible or not
-    RMB.v = S_T ~= nil and S_T.id == nil
+    RMB.v = ST ~= nil and ST.id == nil
 
     if IB(7) then
         -- on touch
@@ -202,22 +202,22 @@ function onTick()
         if IB(8) then
             if AWPB.pressed then
                 -- add waypoint if not duplicated
-                local i, _ = findWP(MX, MY)
+                local i, _ = fWP(MX, MY)
                 if i == -1 then
                     TIN(WPS, tar(MX, 0, MY))
                 end
             elseif CLRB.pressed then
                 -- clear all wps
                 WPS = {}
-                S_T = nil
+                ST = nil
             elseif FCSB.pressed then
                 -- focus on selected wp
-                FCS_M = true
+                FCSM = true
             elseif RMB.pressed then
                 -- rm selected wp
-                local i, _ = findWP(S_T.x, S_T.z)
+                local i, _ = fWP(ST.x, ST.z)
                 TRM(WPS, i)
-                S_T = nil
+                ST = nil
             else
                 pressFlag = false
                 -- press radar targets
@@ -225,17 +225,17 @@ function onTick()
                     if t:press(tx, ty) then
                         pressFlag = true
                         if t.pressed then
-                            if S_T ~= nil then
+                            if ST ~= nil then
                                 -- unpress the previous selected one
-                                S_T.pressed = false
+                                ST.pressed = false
                             end
-                            S_T = t
+                            ST = t
                         else
                             -- unpress
-                            S_T = nil
+                            ST = nil
                         end
                         -- unfocus
-                        FCS_M = false
+                        FCSM = false
                         break
                     end
                 end
@@ -247,17 +247,17 @@ function onTick()
                             pressFlag = true
                             -- check status
                             if wp.pressed then
-                                if S_T ~= nil then
+                                if ST ~= nil then
                                     -- unpress the previous selected one
-                                    S_T.pressed = false
+                                    ST.pressed = false
                                 end
-                                S_T = wp
+                                ST = wp
                             else
                                 -- unpress
-                                S_T = nil
+                                ST = nil
                             end
                             -- unfocus
-                            FCS_M = false
+                            FCSM = false
                             break
                         end
                     end
@@ -282,17 +282,17 @@ function onTick()
     ON(11, ZOOM)
 
     -- update focus mode
-    FCS_M = FCS_M and S_T ~= nil and not IB(9)
-    OB(3, FCS_M)
+    FCSM = FCSM and ST ~= nil and not IB(9)
+    OB(3, FCSM)
     -- set selected data
-    if S_T ~= nil then
+    if ST ~= nil then
         -- selected target
         OB(1, true)
         -- target id,x,y,z
-        ON(1, S_T.id or 0)
-        ON(2, S_T.x)
-        ON(3, S_T.y)
-        ON(4, S_T.z)
+        ON(1, ST.id or 0)
+        ON(2, ST.x)
+        ON(3, ST.y)
+        ON(4, ST.z)
     else
         OB(1, false)
         ON(1, 0)
@@ -306,9 +306,11 @@ function onTick()
         OB(2, true)
         ON(5, wp.x)
         ON(6, wp.z)
-
+        local distance = dist(X, Y, wp.x, wp.z)
+        ON(12, distance)
+        ON(13, math.atan(wp.x - X, wp.z - Y))
         -- check ap & FTWP
-        if IB(10) and IB(11) and dist(X, Y, wp.x, wp.z) < JWPD then
+        if distance < JWPD then
             -- remove this waypoint
             TRM(WPS, 1)
         end
@@ -316,15 +318,17 @@ function onTick()
         OB(2, false)
         ON(5, 0)
         ON(6, 0)
+        ON(12, -1)
+        ON(13, 0)
     end
 end
 
 function onDraw()
     -- draw waypoint lines
     SC(UC2)
-    local sx, sy = M2S(MX, MY, ZOOM, SCR_W, SCR_H, X, Y)
+    local sx, sy = M2S(MX, MY, ZOOM, SCRW, SCRH, X, Y)
     for _, wp in ipairs(WPS) do
-        local x, y = M2S(MX, MY, ZOOM, SCR_W, SCR_H, wp.x, wp.z)
+        local x, y = M2S(MX, MY, ZOOM, SCRW, SCRH, wp.x, wp.z)
         DL(sx, sy, x, y)
         sx, sy = x, y
     end

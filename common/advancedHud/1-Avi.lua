@@ -261,7 +261,7 @@ function DSPD(ox, oy)
         CDT(ox - 10, oy + 34, "AP")
     end
     -- draw Mach
-    CDT(ox - 20, oy - 34, SF("M %.2f", MA))
+    CDT(ox - 25, oy - 34, SF("M %.2f", MA))
 end
 
 function DALT(ox, oy)
@@ -297,7 +297,7 @@ function DALT(ox, oy)
         CDT(ox + 2, oy + 34, SF("%.0f", DTG))
     end
     -- draw fuel level
-    CDT(ox - 5, oy - 34, SF("+%.0f", FUEL))
+    CDT(ox, oy - 34, SF("+%.0f", FUEL))
 end
 
 function DBA(radius)
