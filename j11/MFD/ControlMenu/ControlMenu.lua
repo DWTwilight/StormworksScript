@@ -1,6 +1,7 @@
 M = math
 MAX = M.max
 MIN = M.min
+DEG = M.deg
 
 S = screen
 DT = S.drawText
@@ -93,7 +94,7 @@ APSSB = PushButton(80, 13, 15, 7, "SET", UC, UC2, 1, 1)
 APHSB = PushButton(80, 20, 15, 7, "SET", UC, UC2, 1, 1)
 IFFSB = PushButton(80, 34, 15, 7, "SET", UC, UC2, 1, 1)
 WDLSB = PushButton(80, 48, 15, 7, "SET", UC, UC2, 1, 1)
-BTNS = { APASB, APSSB, APHSB, IFFSB, WDLSB }
+BTNS = {APASB, APSSB, APHSB, IFFSB, WDLSB}
 
 function onTick()
     if IB(1) then
@@ -124,7 +125,7 @@ function onTick()
     if IB(3) then
         APA = clamp(IN(4), 50, 19000) // 1
         APS = clamp(IN(5) * 3.6, 400, 1500) // 1
-        APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
+        APH = DEG(IN(6))
     end
 
     -- when AP mannual throttle control, change speed target
@@ -138,7 +139,11 @@ function onTick()
     FTWP = IB(4)
     if FTWP and (IN(7) ~= 0 or IN(8) ~= 0) then
         -- override yawtarget
-        APH = ((IN(6) / M.pi * 180 + 360) // 1) % 360
+        APH = DEG(IN(6))
+    end
+
+    if APH ~= nil and APH < 0 then
+        APH = APH + 360
     end
 
     ON(1, APA or 0)
