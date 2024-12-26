@@ -85,19 +85,12 @@ end
 
 -- convert screen pos according to roll
 function rollR(x, y, rotation)
-    return
-        x * COS(rotation) - y * SIN(rotation),
-        x * SIN(rotation) + y * COS(rotation)
+    return x * COS(rotation) - y * SIN(rotation), x * SIN(rotation) + y * COS(rotation)
 end
 
 -- (0, 0) is center viewpoint
 function CDL(x1, y1, x2, y2)
-    DL(
-        FL(x1 + OX),
-        FL(y1 + OY),
-        FL(x2 + OX),
-        FL(y2 + OY)
-    )
+    DL(FL(x1 + OX), FL(y1 + OY), FL(x2 + OX), FL(y2 + OY))
 end
 
 function CDR(x, y, w, h)
@@ -195,9 +188,9 @@ function DHEAD(oy)
     local headingAng = (DEG(YAW) + 360) % 360
     -- draw scaleplate
     for i = -20 - (headingAng // 1) % 5, 25, 5 do
-        local ox = 2 * i
+        local ox = 2 * (i - headingAng % 1)
         if ABS(ox) < 35 then
-            local curAng = ((headingAng + i) % 360) // 1
+            local curAng = ((headingAng + i + 360) % 360) // 1
             if curAng % 10 == 0 then
                 CDL(ox, oy + 7, ox, oy + 11)
                 local currentHeadingText = SF("%d", curAng // 10)
@@ -244,9 +237,7 @@ function DSPD(ox, oy)
     local svOLimitX, svOLimitY = 60, 40
     local svOx, svOy = SDP / SPDZ * SPDX, -SDP / SPDZ * SPDY
     if BLK or (ABS(svOx) < svOLimitX and ABS(svOy) < svOLimitY) then
-        svOx, svOy =
-            clamp(svOx, -svOLimitX, svOLimitX),
-            clamp(svOy, -svOLimitY, svOLimitY)
+        svOx, svOy = clamp(svOx, -svOLimitX, svOLimitX), clamp(svOy, -svOLimitY, svOLimitY)
         CDC(svOx, svOy, 3)
         CDL(svOx, svOy - 3, svOx, svOy - 6)
         CDL(svOx - 3, svOy, svOx - 6, svOy)

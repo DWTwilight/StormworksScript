@@ -45,12 +45,7 @@ function SC(c)
 end
 
 function CDL(x1, y1, x2, y2)
-    DL(
-        FL(x1 + OX),
-        FL(y1 + OY),
-        FL(x2 + OX),
-        FL(y2 + OY)
-    )
+    DL(FL(x1 + OX), FL(y1 + OY), FL(x2 + OX), FL(y2 + OY))
 end
 
 function CDR(x, y, w, h)
@@ -71,16 +66,13 @@ function RT(id, x, y, z, f, ttl)
         f = f,
         ttl = ttl,
         ttlF = ttl, -- for calculation
-        pos = { x, y, z },
+        pos = {x, y, z},
         lockF = 0,
         speedL = nil, -- local speed per tick, appose to player
         update = function(t, x, y, z, ttl, f)
             -- update speed
-            t.speedL = {
-                (x - t.pos[1]) / t.ttlF,
-                (y - t.pos[2]) / t.ttlF,
-                (z - t.pos[3]) / t.ttlF }
-            t.pos = { x, y, z }
+            t.speedL = {(x - t.pos[1]) / t.ttlF, (y - t.pos[2]) / t.ttlF, (z - t.pos[3]) / t.ttlF}
+            t.pos = {x, y, z}
             t.ttl = ttl
             t.ttlF = ttl
             t.f = f
@@ -90,17 +82,14 @@ function RT(id, x, y, z, f, ttl)
                 return t.pos[1], t.pos[2], t.pos[3]
             end
             local totalTickOffset = tickOffset + t.ttlF - t.ttl
-            return t.pos[1] + t.speedL[1] * totalTickOffset,
-                t.pos[2] + t.speedL[2] * totalTickOffset,
+            return t.pos[1] + t.speedL[1] * totalTickOffset, t.pos[2] + t.speedL[2] * totalTickOffset,
                 t.pos[3] + t.speedL[3] * totalTickOffset
         end,
         draw = function(t)
             -- check if in front
             local x, y, z = t:curPos(DELAY_C)
             if z > 0 then
-                local sx, sy =
-                    (x / z) * SDP - HRTW - 1,
-                    (y / z) * -SDP - HRTW - 1
+                local sx, sy = (x / z) * SDP - HRTW - 1, (y / z) * -SDP - HRTW - 1
                 if t.lockF == 0 then
                     -- not locked
                     SC(UC)
@@ -284,10 +273,10 @@ function onDraw()
         if BLK or ABS(ox) <= limit then
             SC(UC)
             ox = M.min(limit, M.max(ox, -limit))
-            CDL(ox, oy + 13, ox - 2, oy + 17)
-            CDL(ox, oy + 13, ox + 3, oy + 17)
+            CDL(ox, oy + 11, ox - 2, oy + 15)
+            CDL(ox, oy + 11, ox + 3, oy + 15)
             local distText = SF("%.1f", WPD / 1000)
-            CDT(ox - #distText * 2.5 + 2, oy + 19, distText)
+            CDT(ox - #distText * 2.5 + 1, oy + 16, distText)
         end
     end
 
