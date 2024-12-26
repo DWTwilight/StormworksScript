@@ -203,14 +203,8 @@ function onTick()
     -- set control outputs
     ON(1, ROLL_CTRL)
     ON(2, PITCH_CTRL)
-    if airBreak and not landed then
-        ON(3, 1)
-        ON(4, 1)
-    else
-        ON(3, YAW_CTRL)
-        ON(4, -YAW_CTRL)
-    end
-    ON(5, 0.15 * (PITCH_CTRL - ROLL_CTRL))
-    ON(6, 0.15 * (PITCH_CTRL + ROLL_CTRL))
-    ON(7, THROTTLE)
+    ON(3, YAW_CTRL)
+    ON(4, 0.15 * (PITCH_CTRL - ROLL_CTRL))
+    ON(5, 0.15 * (PITCH_CTRL + ROLL_CTRL))
+    ON(6, THROTTLE)
 end
