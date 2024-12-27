@@ -124,6 +124,22 @@ function RT(id, x, y, z, f, ttl)
                 return a < t.lockF == 2 and FOV or FOV * LA, a
             end
             return false, 0
+        end,
+        isMissile = function(t)
+            if t.speedL ~= nil then
+                local x, y, z = t:curPos(DELAY_C)
+                local angle, hitTime = calculateAngleAndTime({
+                    x = -x,
+                    y = -y,
+                    z = -z
+                }, {
+                    x = t.speedL[1],
+                    y = t.speedL[2],
+                    z = t.speedL[3]
+                })
+                return angle < MI_ANG_THRS and hitTime < MI_HTT_THRS
+            end
+            return false
         end
     }
 end
@@ -140,6 +156,9 @@ LA = PN("Lock Angle Portion")
 HRTW = RTW // 2
 SDP = HSCRW / TAN(FOV / 2) -- screen px distance
 
+MI_ANG_THRS = PN("Missile Angle Threshold")
+MI_HTT_THRS = PN("Missile Hit Time Threshold(tick)")
+
 UC = H2RGB(PT("UI Primary Color"))
 UC2 = H2RGB(PT("UI Secondary Color"))
 
@@ -154,6 +173,25 @@ BC_OFFSET_YAW, BC_OFFSET_PITCH = 0, 0
 
 -- waypoint info
 WPD, WPH, YAW = -1, 0, 0
+
+function magnitude(v)
+    return math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z)
+end
+function calculateAngleAndTime(dist, speed)
+    -- Function to calculate the dot product
+    local function dotProduct(v1, v2)
+        return v1.x * v2.x + v1.y * v2.y + v1.z * v2.z
+    end
+
+    local dot = dotProduct(dist, speed)
+    local distMag = magnitude(dist)
+    local speedMag = magnitude(speed)
+
+    -- Calculate the angle using the dot product and magnitudes
+    local angle = math.acos(dot / (distMag * speedMag))
+
+    return angle, distMag / speedMag
+end
 
 function onTick()
     WPD, WPH, YAW = IN(15), IN(16), IN(17)
@@ -181,10 +219,14 @@ function onTick()
     end
     -- refresh radar data
     local toRM = {}
+    local missileFlag = false
     for id, t in PR(RTS) do
         t.ttl = t.ttl - 1
         if t.ttl < 0 then
             table.insert(toRM, id)
+        end
+        if not missileFlag then
+            missileFlag = t:isMissile()
         end
     end
     for _, id in IPR(toRM) do
@@ -193,6 +235,9 @@ function onTick()
             LOCKT = nil
         end
     end
+
+    -- set if detected missile
+    OB(1, missileFlag)
 
     if IN(9) == 0 then
         -- enable hud lock

@@ -49,6 +49,7 @@ function SC(c)
 end
 
 UC = H2RGB(PT("UI Primary Color"))
+UC2 = H2RGB(PT("UI Secondary Color"))
 SCRW = PN("Screen Width")
 HSCRW = SCRW / 2
 LOF = PN("Look Offset Factor")
@@ -66,6 +67,9 @@ THR, VSPD, DTG = 0, 0, 0
 AP, BLK = false, false
 MA, FUEL = 0, 0
 
+ALERT = 0
+ALERT_INFO = {"FUEL LOW", "PULL UP", "STALL", "ENGINE FAIL", "RADAR DETC", "MISSILE"}
+
 function clamp(v, min, max)
     return MAX(MIN(v, max), min)
 end
@@ -78,9 +82,10 @@ function onTick()
     ROLL, PITCH, YAW = IN(3), IN(4), IN(5)
     SPD, ALT = IN(6) * 3.6, IN(7)
     SPDX, SPDY, SPDZ = IN(8), IN(9), MAX(1, IN(10))
-    THR, VSPD, DTG = IN(11), IN(12) * 60 // 1, IN(13)
+    THR, VSPD, DTG = IN(11), IN(12), IN(13)
     AP, BLK = IB(1), IB(2)
     MA, FUEL = IN(14), IN(15)
+    ALERT = IN(16)
 end
 
 -- convert screen pos according to roll
@@ -280,7 +285,7 @@ function DALT(ox, oy)
     CDT(ox + 2, oy - 2, s)
     CDR(ox, oy - 4, 26, 8)
     -- draw vertical speed
-    s = SF("%d", VSPD)
+    s = SF("%.0f", VSPD)
     CDT(ox - (VSPD < 0 and 8 or 3), oy + 28, s)
     CDRF(ox - 2, oy + (VSPD > 0 and 1 or 0), 2, -26 * clamp(VSPD / 50, -1, 1))
     -- draw distance to ground
@@ -322,4 +327,11 @@ function onDraw()
 
     -- draw altitude
     DALT(50, -15)
+
+    -- draw alert
+    if BLK and ALERT > 0 then
+        SC(UC2)
+        local alertText = ALERT_INFO[ALERT]
+        CDT(#alertText * -2.5, 5, alertText)
+    end
 end
