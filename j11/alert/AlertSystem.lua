@@ -37,7 +37,7 @@ function onTick()
         elseif not IB(6) and IN(1) < STALL_THRS then
             -- airborn and not enough speed
             CUR_ALERT = ALERT.STALL
-        elseif IB(5) and (IN(2) < ALT_THRS or IN(3) < IN(2) / -ALT_IMP_THRS) then
+        elseif IB(5) and (IN(2) < ALT_THRS or IN(3) < (math.max(IN(2), IN(5)) / -ALT_IMP_THRS)) then
             -- gear up and check
             CUR_ALERT = ALERT.ALTITUDE
         elseif IN(4) < FUEL_THRS then
