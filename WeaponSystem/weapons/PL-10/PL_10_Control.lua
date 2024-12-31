@@ -91,6 +91,11 @@ STATUS = {
     RTD = 3
 }
 
+LAUCH_STAT = {
+    CHASE = 0,
+    STRIKE = 1
+}
+
 VID = PN("Id on Vehicle") -- id on vehicle
 TICK_PER_SEC = PN("Tick per Sec")
 LAUCH_CONTROL_DELAY = PN("Lauch Control Delay(tick)")
@@ -103,11 +108,13 @@ PITCH_LIMIT = PN("Pitch Limit")
 DETONATE_THRESHOLD = PN("Detonate Threshold")
 TTL = PN("Time To Live") * TICK_PER_SEC
 ROLL_STA_FACTOR = PN("Roll STA Factor")
+STRIKE_DIST = PN("Strike Distance(m)")
 
 CURRENT_STATUS = STATUS.RT
 TARGET_ID = 0
 TARGET = nil
 DL_FREQ = 0
+CUR_LAUCH_STAT = LAUCH_STAT.CHASE
 
 function calAngleDiff2D(target, current)
     -- Function to calculate the dot product
@@ -152,19 +159,34 @@ function calInterceptVelocity(x, y, z, speedQuad)
     if TARGET.v == nil then
         return nil, nil, nil, false
     end
-    local tx, ty, tz = TARGET:curPos(TARGET_DELAY_COMPENSATION)
-    local tvx, tvy, tvz = TARGET.v[1], TARGET.v[2], TARGET.v[3]
-    local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
-    local nvx, nvy, nvz = normalize(tx - x, ty - y, tz - z, dist)
 
-    local k = solveQuadratic(nvx ^ 2 + nvy ^ 2 + nvz ^ 2, 2 * (nvx * tvx + nvy * tvy + nvz * tvz),
-        tvx ^ 2 + tvy ^ 2 + tvz ^ 2 - speedQuad)
-    if k == nil then
+    if CUR_LAUCH_STAT == LAUCH_STAT.CHASE then
+        -- chase stage
+        local tx, ty, tz = TARGET:curPos(0)
+        -- check dist and change status 
+        local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+        if dist < STRIKE_DIST then
+            CUR_LAUCH_STAT = LAUCH_STAT.STRIKE
+        end
         -- fly toward target
         return tx - x, ty - y, tz - z, false
+    else
+        -- strike stage 
+        local tx, ty, tz = TARGET:curPos(TARGET_DELAY_COMPENSATION)
+        local tvx, tvy, tvz = TARGET.v[1], TARGET.v[2], TARGET.v[3]
+        local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+        local nvx, nvy, nvz = normalize(tx - x, ty - y, tz - z, dist)
+
+        local k = solveQuadratic(nvx ^ 2 + nvy ^ 2 + nvz ^ 2, 2 * (nvx * tvx + nvy * tvy + nvz * tvz),
+            tvx ^ 2 + tvy ^ 2 + tvz ^ 2 - speedQuad)
+        if k == nil or k <= 0 then
+            -- fly toward target
+            return tx - x, ty - y, tz - z, false
+        else
+            local timeToImpact = dist / k
+            return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DETONATE_THRESHOLD
+        end
     end
-    local timeToImpact = dist / k
-    return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DETONATE_THRESHOLD
 end
 
 function onTick()
@@ -262,9 +284,7 @@ function onTick()
                 ON(1, clamp(yawOffset / pi * YAW_SENSITIVITY, -YAW_LIMIT, YAW_LIMIT))
                 ON(2, clamp(pitchOffset / pi * PITCH_SENSITIVITY, -PITCH_LIMIT, PITCH_LIMIT))
             end
-            if detonate then
-                OB(1, true)
-            end
+            OB(1, detonate)
         end
     end
     ON(3, CURRENT_STATUS)

@@ -91,6 +91,11 @@ STATUS = {
     RTD = 3
 }
 
+LAUCH_STAT = {
+    CRUISE = 0,
+    STRIKE = 1
+}
+
 VID = PN("Id on Vehicle") -- id on vehicle
 TPS = PN("Tick per Sec")
 LCD = PN("Lauch Control Delay(tick)")
@@ -109,7 +114,7 @@ C_STAT = STATUS.RT
 T_ID = 0
 T = nil
 DL_FREQ = 0
-CRUISE = true
+CUR_LAUCH_STAT = LAUCH_STAT.CRUISE
 
 function calAngleDiff2D(target, current)
     -- Function to calculate the dot product
@@ -154,36 +159,39 @@ function calInterceptVelocity(x, y, z, speedQuad)
     if T.v == nil then
         return nil, nil, nil, false
     end
-    local tx, ty, tz = T:curPos(TDC)
-    local tvx, tvy, tvz = T.v[1], T.v[2], T.v[3]
-    local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
 
-    if CRUISE then
+    if CUR_LAUCH_STAT == LAUCH_STAT.CRUISE then
         -- cruise stage
+        local tx, ty, tz = T:curPos(0)
+        local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+        -- calculate target pitch
+        local targetPitchAng = clamp((CRUISE_ALT - y) / 2000 * pi, -pi / 4, pi / 4)
+        -- cal fake ty
+        ty = y + ((tx - x) ^ 2 + (tz - z) ^ 2) ^ 0.5 * sin(targetPitchAng)
+        -- check dist and change status 
         if dist <= STRIKE_DIST then
             -- start strike
-            CRUISE = false
+            CUR_LAUCH_STAT = LAUCH_STAT.STRIKE
+        end
+        -- fly toward target
+        return tx - x, ty - y, tz - z, false
+    else
+        -- strike stage
+        local tx, ty, tz = T:curPos(TDC)
+        local tvx, tvy, tvz = T.v[1], T.v[2], T.v[3]
+        local dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+        local nvx, nvy, nvz = normalize(tx - x, ty - y, tz - z, dist)
+
+        local k = solveQuadratic(nvx ^ 2 + nvy ^ 2 + nvz ^ 2, 2 * (nvx * tvx + nvy * tvy + nvz * tvz),
+            tvx ^ 2 + tvy ^ 2 + tvz ^ 2 - speedQuad)
+        if k == nil or k <= 0 then
+            -- fly toward target
+            return tx - x, ty - y, tz - z, false
         else
-            -- cruise control
-            -- set tvy to 0
-            tvy = 0
-            -- calculate target pitch
-            local targetPitchAng = clamp((CRUISE_ALT - y) / 2000 * pi, -pi / 4, pi / 4)
-            -- cal fake ty & fake dist
-            ty = y + ((tx - x) ^ 2 + (tz - z) ^ 2) ^ 0.5 * sin(targetPitchAng)
-            dist = ((tx - x) ^ 2 + (ty - y) ^ 2 + (tz - z) ^ 2) ^ 0.5
+            local timeToImpact = dist / k
+            return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DTTHRE
         end
     end
-
-    local nvx, nvy, nvz = normalize(tx - x, ty - y, tz - z, dist)
-
-    local k = solveQuadratic(nvx ^ 2 + nvy ^ 2 + nvz ^ 2, 2 * (nvx * tvx + nvy * tvy + nvz * tvz),
-        tvx ^ 2 + tvy ^ 2 + tvz ^ 2 - speedQuad)
-    if k == nil then
-        return tx - x, ty - y, tz - z, false
-    end
-    local timeToImpact = dist / k
-    return k * nvx + tvx, k * nvy + tvy, k * nvz + tvz, timeToImpact <= DTTHRE
 end
 
 function onTick()
@@ -290,9 +298,7 @@ function onTick()
                 ON(1, clamp(yawOffset / pi * YAWS, -YAWL, YAWL))
                 ON(2, clamp(pitchOffset / pi * PITCHS, -PITCHL, PITCHL))
             end
-            if detonate then
-                OB(1, true)
-            end
+            OB(1, detonate)
         end
     end
     ON(3, C_STAT)
