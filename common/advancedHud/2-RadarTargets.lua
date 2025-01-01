@@ -137,7 +137,16 @@ function RT(id, x, y, z, f, ttl)
                     y = t.speedL[2],
                     z = t.speedL[3]
                 })
-                return angle < MI_ANG_THRS and hitTime < MI_HTT_THRS
+                local selfAngle, _ = calculateAngleAndTime({
+                    x = 0,
+                    y = 0,
+                    z = 1
+                }, {
+                    x = x,
+                    y = y,
+                    z = z
+                })
+                return selfAngle > MI_ANG_THRS and angle < MI_ANG_THRS and hitTime < MI_HTT_THRS
             end
             return false
         end
