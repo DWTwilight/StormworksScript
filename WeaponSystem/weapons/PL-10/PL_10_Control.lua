@@ -195,7 +195,7 @@ function onTick()
         if IN(18) == VID then
             -- update target info
             TARGET_ID = IN(19)
-            if TARGET_ID ~= 0 then
+            if TARGET_ID > 0 then
                 -- have target, transform status to ready
                 CURRENT_STATUS = STATUS.RDY
             end

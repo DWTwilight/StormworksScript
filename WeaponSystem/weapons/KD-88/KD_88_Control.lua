@@ -200,7 +200,7 @@ function onTick()
         if IN(18) == VID then
             -- update target info
             T_ID = IN(19)
-            if T_ID ~= 0 or (IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0)) then
+            if T_ID > 0 or (IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0)) then
                 -- have target, transform status to ready
                 C_STAT = STATUS.RDY
             end

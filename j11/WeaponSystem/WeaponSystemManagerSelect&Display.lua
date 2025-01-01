@@ -269,7 +269,15 @@ function onTick()
             if sf then
                 -- update guide method btn group
                 GBG.gm = wg.gm
-                GBG.sgm = wg.dgm
+                local resetFlag = true
+                for _, gm in ipairs(GBG.gm) do
+                    if gm == GBG.sgm then
+                        resetFlag = false
+                    end
+                end
+                if resetFlag then
+                    GBG.sgm = wg.dgm
+                end
             end
         else
             GBG.gm = {}
