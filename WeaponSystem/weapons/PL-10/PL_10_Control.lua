@@ -11,7 +11,6 @@ abs = m.abs
 pi = m.pi
 
 IN = input.getNumber
-IB = input.getBool
 ON = output.setNumber
 OB = output.setBool
 PN = property.getNumber
@@ -205,15 +204,17 @@ function onTick()
         -- check if this is selected weapon
         if IN(18) == VID then
             -- update target info
-            TARGET_ID = IN(19)
-            if TARGET_ID == 0 then
-                -- have no target, transform status to require target
-                CURRENT_STATUS = STATUS.RT
-            elseif IB(5) then
+            if IN(19) == -999 then
                 -- have target & trigger, activate lauch procedure
                 CURRENT_STATUS = STATUS.RTD
                 -- set datalink freq
                 DL_FREQ = IN(29)
+            else
+                TARGET_ID = IN(19)
+                if TARGET == 0 then
+                    -- have no target, transform status to require target
+                    CURRENT_STATUS = STATUS.RT
+                end
             end
         else
             -- not selected weapon, reset status to require target

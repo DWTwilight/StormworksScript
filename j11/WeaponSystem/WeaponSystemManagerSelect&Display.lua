@@ -222,6 +222,7 @@ function onTick()
     -- after init
     if INITD <= 0 then
         -- upsert weapon info
+        local lauchFlag = false
         for i = 1, WCNT do
             local num, wid = IN(2 * i), WM[i]
             if wid ~= nil then
@@ -230,11 +231,16 @@ function onTick()
                 WG[WGM[wid]]:upsertW(i, ammo, status)
 
                 -- lauch detach control
-                OB(i, status == 3)
+                local lauch = i > 1 and status == 3
+                OB(i, lauch)
+                lauchFlag = lauchFlag or lauch
             else
                 OB(i, false)
             end
         end
+
+        -- lauch buzzer
+        OB(31, lauchFlag)
 
         -- weapon switch control
         local sf = false

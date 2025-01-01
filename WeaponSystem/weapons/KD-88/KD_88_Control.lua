@@ -11,7 +11,6 @@ abs = m.abs
 pi = m.pi
 
 IN = input.getNumber
-IB = input.getBool
 ON = output.setNumber
 OB = output.setBool
 PN = property.getNumber
@@ -210,17 +209,8 @@ function onTick()
         -- check if this is selected weapon
         if IN(18) == VID then
             -- update target info
-            T_ID = IN(19)
-            if T_ID == 0 then
-                -- check if is gps target
-                if IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0) then
-                    T_ID = -1
-                end
-            end
-            if T_ID == 0 then
-                -- have no target, transform status to require target
-                C_STAT = STATUS.RT
-            elseif IB(5) then
+            if IN(19) == -999 then
+                -- lauch procedure
                 -- have target & trigger, activate lauch procedure
                 C_STAT = STATUS.RTD
                 -- set datalink freq
@@ -229,6 +219,17 @@ function onTick()
                     -- create target mannually
                     T = target({IN(30), 0, IN(31)}, 0)
                     T.v = {0, 0, 0}
+                end
+            else
+                T_ID = IN(19)
+                if T_ID == 0 then
+                    -- check if is gps target
+                    if IN(32) == 2 and (IN(30) ~= 0 or IN(31) ~= 0) then
+                        T_ID = -1
+                    else
+                        -- have no target, transit status to require target
+                        C_STAT = STATUS.RT
+                    end
                 end
             end
         else

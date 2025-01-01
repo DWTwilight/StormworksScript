@@ -11,7 +11,6 @@ abs = m.abs
 pi = m.pi
 
 IN = input.getNumber
-IB = input.getBool
 ON = output.setNumber
 OB = output.setBool
 PN = property.getNumber
@@ -223,7 +222,7 @@ function onTick()
             if TARGET_ID == 0 then
                 -- have no target, transform status to require target
                 CURRENT_STATUS = STATUS.RT
-            elseif IB(5) then
+            elseif IN(30) == 1 then
                 -- have target & trigger, activate lauch procedure
                 CURRENT_STATUS = STATUS.RTD
                 -- set datalink freq
