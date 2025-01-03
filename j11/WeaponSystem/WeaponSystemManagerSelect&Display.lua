@@ -415,7 +415,7 @@ function onDraw()
             -- #13
             DAS(46, 36, 13)
             -- #12
-            DAS(46, 69, 12)
+            DAS(46, 60, 12)
         end
     else
         SC(DC)
