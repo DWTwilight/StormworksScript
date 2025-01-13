@@ -5,9 +5,12 @@ ABS = M.abs
 RAD = M.rad
 PI = M.pi
 PI2 = 2 * PI
+PIH = PI / 2
+PIT = PI / 3
 COS = M.cos
 SIN = M.sin
 AC = M.acos
+AS = M.asin
 TAN = M.tan
 
 IN = input.getNumber
@@ -29,12 +32,13 @@ TRIM_YAW_SENS = PN("Yaw Trim Sensitivity")
 AP_THROT_SENS = PN("AP Throttle Sensitivity")
 AP_THROT_F = PN("AP Throttle Factor")
 AP_THROT_PRECIS = PN("AP Throttle Precision")
+AP_THROT_MIN = PN("AP Throttle Min")
 
 -- AP Roll Config
 AP_MAX_ROLL = PN("AP Max Roll") -- ap max roll angle
-AP_ROLL_F = PN("AP Roll Factor") -- ap roll propotion to yawDiff
-AP_ROLL_SENS = PN("AP Roll Sensitivity") -- ap roll sens
+AP_ROLL_SENS = PN("AP Roll Sensitivity") -- ap roll sens propotion to yawDiff
 AP_ROLL_CL = PN("AP Roll Control Limit") -- max ap roll control value
+AP_ROLL_CTRL_SENS = PN("AP Roll Control Sensitivity")
 
 -- AP Pitch Config
 AP_MAX_PITCH = PN("AP Max Pitch") -- max pitch angle
@@ -43,8 +47,7 @@ AP_MAX_PITCH_SPD = PN("AP Max Pitch Speed") -- max pitch angular speed
 AP_PITCH_CTRL_SENS = PN("AP Pitch Control Sensitivity") -- control sens for ap pitch control
 
 -- AP Yaw Config
-AP_YAW_SENS = PN("AP Yaw Sensitivity")
-AP_MAX_YAW_SPD = PN("AP Max Yaw Speed")
+AP_YAW_CL = PN("AP Yaw Control Limit")
 AP_YAW_CTRL_SENS = PN("AP Yaw Control Sensitivity")
 
 AP_POS_W = PN("AP Position Weight") -- weight of pos diff
@@ -99,16 +102,6 @@ function Mv(M, v)
     return u
 end
 
-function tM(M) -- Transpose matrix
-    local N = {{}, {}, {}}
-    for i = 1, 3 do
-        for j = 1, 3 do
-            N[i][j] = M[j][i]
-        end
-    end
-    return N
-end
-
 function EularRotate(v, B)
     local p = Mv(B, {v[1], v[3], v[2]})
     return p[1], p[3], p[2]
@@ -139,6 +132,13 @@ function calAngleDiff2D(target, current)
     end
 end
 
+-- rotate a vector v along Y axis by ang(rad)
+function rotateY(v, ang)
+    local x, z = v[1], v[3]
+    v[1] = x * COS(ang) + z * SIN(ang)
+    v[3] = -x * SIN(ang) + z * COS(ang)
+end
+
 function onTick()
     -- control inputs
     local rollMInput, pitchMInput, yawMInput, throttleMInput = IN(1), IN(2), IN(3), IN(4)
@@ -147,11 +147,6 @@ function onTick()
     local manualThrottleControl = throttleUpM or throttleDownM
     local manualControl = ABS(rollMInput) > 0 or ABS(pitchMInput) > 0 or ABS(yawMInput) > 0 or airBreak or
                               manualThrottleControl
-
-    -- default throttle control 
-    THROT = throttleMInput
-    OB(1, throttleUpM)
-    OB(2, throttleDownM)
 
     if landed then
         -- landed
@@ -162,6 +157,11 @@ function onTick()
         -- set outputs
         -- landed, use primitive inputs
         ROLLC, PITCHC, YAWC = rollMInput, pitchMInput, yawMInput
+
+        -- default throttle control 
+        THROT = throttleMInput
+        OB(1, throttleUpM)
+        OB(2, throttleDownM)
     else
         -- airborn
         local gx, gy, gz, airSpeed = IN(5), IN(6), IN(7), IN(8)
@@ -185,7 +185,7 @@ function onTick()
                 YAWT = YAWC
             end
 
-            local targetSpeed, targetSpeedVector, targetPosDiffVector = airSpeed, {}, {}
+            local targetSpeed, targetSpeedVector, targetPosDiffVector = 0, {}, {}
 
             if IB(7) then
                 -- reserve logic for ILS
@@ -202,8 +202,7 @@ function onTick()
                     -- fly to waypoint enabled, override yaw target
                     yawTarget = IN(15)
                 end
-                local apSpeedTargetConfig = IN(16)
-                targetSpeed = apSpeedTargetConfig / 3.6
+                targetSpeed = IN(16) / 3.6
                 targetSpeedVector = {SIN(yawTarget), 0, COS(yawTarget)}
                 targetPosDiffVector = {0, altTarget - gy, 0}
             end
@@ -212,39 +211,42 @@ function onTick()
             targetSpeedVector = {targetSpeedVector[1] + targetPosDiffVector[1] * AP_POS_W,
                                  targetSpeedVector[2] + targetPosDiffVector[2] * AP_POS_W,
                                  targetSpeedVector[3] + targetPosDiffVector[3] * AP_POS_W}
+            -- get current atitude (global)
+            local roll, yaw = IN(17), IN(18)
             -- clamp target Pitch
             local maxSpeedVectorY = TAN(AP_MAX_PITCH) * (targetSpeedVector[1] ^ 2 + targetSpeedVector[3] ^ 2) ^ 0.5
             targetSpeedVector[2] = clamp(targetSpeedVector[2], -maxSpeedVectorY, maxSpeedVectorY)
-
-            -- get current atitude (global)
-            local roll, yaw = IN(17), IN(18)
-
-            -- calculate global yawDiff (for roll)
-            local globalYawDiff = calAngleDiff2D({targetSpeedVector[1], targetSpeedVector[2]}, {COS(yaw), SIN(yaw)})
+            -- clamp target yaw
+            -- calculate global yawDiff
+            local globalYawDiff = calAngleDiff2D({targetSpeedVector[1], targetSpeedVector[3]}, {SIN(yaw), COS(yaw)})
+            if globalYawDiff > PIT then
+                rotateY(targetSpeedVector, -globalYawDiff + PIT)
+            elseif globalYawDiff < -PIT then
+                rotateY(targetSpeedVector, -globalYawDiff - PIT)
+            end
 
             -- transform to local
-            local tvx, tvy, tvz = EularRotate(targetSpeedVector, tM(Eular2RotMat({IN(19), IN(21), IN(20)})))
+            local tvx, tvy, tvz = EularRotate(targetSpeedVector, Eular2RotMat({IN(19), IN(21), IN(20)}))
 
             -- get current speed (local)
             local lvx, lvy, lvz = IN(22), IN(23), IN(24)
 
             -- calculate yaw & pitch offset (local)
             local yawOffset = calAngleDiff2D({tvx, tvz}, {lvx, lvz})
-            local pitchOffset = -calAngleDiff2D({(tvx ^ 2 + tvz ^ 2) ^ 0.5, tvy}, {(lvx ^ 2 + lvz ^ 2) ^ 0.5, lvy})
+            local pitchOffset = calAngleDiff2D({tvy, (tvx ^ 2 + tvz ^ 2) ^ 0.5}, {lvy, (lvx ^ 2 + lvz ^ 2) ^ 0.5})
 
             -- calculate controls
             -- roll
-            local rollTarget = clamp(-globalYawDiff * AP_ROLL_SENS, -AP_MAX_ROLL, AP_MAX_ROLL)
-            ROLLC = clamp((rollTarget - roll), -AP_ROLL_CL, AP_ROLL_CL)
+            -- local rollTarget = 0
+            local rollTarget = clamp(globalYawDiff * AP_ROLL_SENS, -AP_MAX_ROLL, AP_MAX_ROLL)
+            ROLLC = clamp((rollTarget - roll) * factor * AP_ROLL_CTRL_SENS, -AP_ROLL_CL, AP_ROLL_CL)
 
             -- pitch
             local targetPitchSpeed = clamp(pitchOffset * AP_PITCH_SENS, -AP_MAX_PITCH_SPD, AP_MAX_PITCH_SPD)
-            PITCHC = clamp(PITCHC + (targetPitchSpeed - curPitchAs) * AP_PITCH_CTRL_SENS, -1, 1)
+            PITCHC = clamp(PITCHC + (targetPitchSpeed - curPitchAs) * factor * AP_PITCH_CTRL_SENS, -1, 1)
 
             -- yaw
-            local targetYawSpeed = clamp(yawOffset * AP_YAW_SENS, -AP_MAX_YAW_SPD, AP_MAX_YAW_SPD)
-            YAWC = clamp(YAWC + (targetYawSpeed - curYawAs) * AP_YAW_CTRL_SENS, -1, 1)
-
+            YAWC = clamp((yawOffset * factor * AP_YAW_CTRL_SENS), -AP_YAW_CL, AP_YAW_CL)
             -- throttle
             if targetSpeed <= 0 or manualThrottleControl then
                 -- manual throttle control
@@ -253,7 +255,8 @@ function onTick()
                 OB(2, throttleDownM)
             else
                 -- auto throttle    
-                THROT = clamp(THROT + clamp((targetSpeed - airSpeed) / AP_THROT_F, -AP_THROT_SENS, AP_THROT_SENS), 0, 1)
+                THROT = MAX(clamp(THROT + clamp((targetSpeed - airSpeed) * AP_THROT_F, -AP_THROT_SENS, AP_THROT_SENS),
+                    0, 1), AP_THROT_MIN)
                 OB(1, THROT - throttleMInput > AP_THROT_PRECIS)
                 OB(2, throttleMInput - THROT > AP_THROT_PRECIS)
             end
@@ -301,6 +304,10 @@ function onTick()
             -- set outputs
             -- manual control, use trimed inputs
             ROLLC, PITCHC, YAWC = trim(rollMInput, ROLLT), trim(pitchMInput, PITCHT), trim(yawMInput, YAWT)
+            -- default throttle control 
+            THROT = throttleMInput
+            OB(1, throttleUpM)
+            OB(2, throttleDownM)
         end
     end
 

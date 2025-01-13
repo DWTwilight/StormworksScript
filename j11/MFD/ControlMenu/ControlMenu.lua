@@ -107,7 +107,11 @@ function onTick()
         if APASB.op then
             APA = clamp(IN(3), 50, 19000) // 1
         elseif APSSB.op then
-            APS = clamp(IN(3), 500, 1500) // 1
+            if IN(3) > 0 then
+                APS = clamp(IN(3), 220, 20000) // 1
+            else
+                APS = nil
+            end
         elseif APHSB.op then
             APH = clamp(IN(3), 0, 359) // 1
         elseif IFFSB.op then
@@ -124,14 +128,13 @@ function onTick()
     -- AP enabled(pulse):
     if IB(3) then
         APA = clamp(IN(4), 50, 19000) // 1
-        APS = clamp(IN(5) * 3.6, 400, 1500) // 1
         APH = DEG(IN(6))
     end
 
     -- when AP mannual throttle control, change speed target
-    AP = IB(7)
-    IFF = IB(8)
-    if AP and (IB(5) or IB(6)) then
+    AP = IB(6)
+    IFF = IB(7)
+    if AP and APS ~= nil and IB(5) then
         APS = clamp(IN(5) * 3.6, 400, 1500) // 1
     end
 
