@@ -185,10 +185,11 @@ function onTick()
                 YAWT = YAWC
             end
 
-            local targetSpeed, targetSpeedVector, targetPosDiffVector = 0, {}, {}
+            local targetSpeed, targetSpeedVector = 0, {}
 
             if IB(7) then
-                -- reserve logic for ILS
+                -- ILS
+
             else
                 -- normal AP
                 -- get basic ap config
@@ -203,14 +204,9 @@ function onTick()
                     yawTarget = IN(15)
                 end
                 targetSpeed = IN(16) / 3.6
-                targetSpeedVector = {SIN(yawTarget), 0, COS(yawTarget)}
-                targetPosDiffVector = {0, altTarget - gy, 0}
+                targetSpeedVector = {SIN(yawTarget), (altTarget - gy) * AP_POS_W, COS(yawTarget)}
             end
 
-            -- apply pos diff to speed target 
-            targetSpeedVector = {targetSpeedVector[1] + targetPosDiffVector[1] * AP_POS_W,
-                                 targetSpeedVector[2] + targetPosDiffVector[2] * AP_POS_W,
-                                 targetSpeedVector[3] + targetPosDiffVector[3] * AP_POS_W}
             -- get current atitude (global)
             local roll, yaw = IN(17), IN(18)
             -- clamp target Pitch

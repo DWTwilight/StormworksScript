@@ -49,10 +49,9 @@ function PIR(x, y, rectX, rectY, rectW, rectH)
     return x >= rectX and y >= rectY and x < rectX + rectW and y < rectY + rectH
 end
 
-function TBTN(x, y, w, h, text, color, toggleColor, toggled, tx, ty)
+function TBTN(posFunc, w, h, text, color, toggleColor, toggled, tx, ty)
     return {
-        x = x,
-        y = y,
+        pf = posFunc,
         w = w,
         h = h,
         text = text,
@@ -62,14 +61,16 @@ function TBTN(x, y, w, h, text, color, toggleColor, toggled, tx, ty)
         tx = tx,
         ty = ty,
         toggle = function(btn, tx, ty)
-            if PIR(tx, ty, btn.x, btn.y, btn.w, btn.h) then
+            local x, y = posFunc()
+            if PIR(tx, ty, x, y, btn.w, btn.h) then
                 btn.toggled = not btn.toggled
             end
         end,
         draw = function(btn)
+            local x, y = posFunc()
             SC(btn.toggled and btn.tc or btn.c)
-            DR(btn.x, btn.y, btn.w, btn.h)
-            DT(btn.x + tx, btn.y + ty, btn.text)
+            DR(x, y, btn.w, btn.h)
+            DT(x + tx, y + ty, btn.text)
         end
     }
 end
@@ -161,8 +162,8 @@ function RT(id, x, y, z, f, ttl)
             local x, y, z = t:curPos()
             -- check if in front
             if z > 0 then
-                local sx, sy = SCR_W / 2 + SCR_W / FOV * AT(x, z) - HRTW - 1,
-                    SCR_W / 2 - SCR_W / FOV * AT(y, (x ^ 2 + z ^ 2) ^ 0.5) - HRTW - 1
+                local sx, sy = SCR_W / 2 + SCR_H / FOV * AT(x, z) - HRTW - 1,
+                    SCR_H / 2 - SCR_H / FOV * AT(y, (x ^ 2 + z ^ 2) ^ 0.5) - HRTW - 1
                 if t.lockF == 0 then
                     -- not locked
                     SC(UC)
@@ -204,7 +205,6 @@ PMIN = PN("Pitch Min") -- in radians
 YBASE = PN("Yaw Base") -- in radians, output will be yaw / YAW_BASE
 PBASE = PN("Pitch Base") -- in radians, output will be pitch / PITCH_BASE
 SEN = PN("Sensitivity")
-SCR_W = PN("Screen Width")
 -- heading config
 HG = PN("Heading Gap")
 HI = PN("Heading Interval")
@@ -220,10 +220,21 @@ OFFSET_X = PN("Camera Offset X")
 OFFSET_Y = PN("Camera Offset Y")
 OFFSET_Z = PN("Camera Offset Z")
 
+SCR_W, SCR_H = 0, 0
 TF = false -- touch flag
 -- btns
-IR_BTN = TBTN(1, SCR_W / 2 - 4, 17, 8, "IR", UC2, UC, false, 4, 2)
-STA_BTN = TBTN(SCR_W - 19, SCR_W / 2 - 4, 17, 8, "STA", UC2, UC, false, 2, 2)
+
+function IRBPos()
+    return 1, SCR_H / 2 - 4
+end
+
+IR_BTN = TBTN(IRBPos, 17, 8, "IR", UC2, UC, false, 4, 2)
+
+function STABPos()
+    return SCR_W - 19, SCR_H / 2 - 4
+end
+
+STA_BTN = TBTN(STABPos, 17, 8, "STA", UC2, UC, false, 2, 2)
 BTNS = {IR_BTN, STA_BTN}
 -- options
 IR = false
@@ -383,9 +394,11 @@ function onTick()
 end
 
 function onDraw()
+    SCR_W, SCR_H = S.getWidth(), S.getHeight()
+
     -- draw crosshair
     SC(UC2)
-    local w, h = SCR_W / 2, SCR_W / 2;
+    local w, h = SCR_W / 2, SCR_H / 2;
     DL(w - 2, h, w, h)
     DL(w + 1, h, w + 3, h)
     DL(w, h - 2, w, h)
@@ -410,44 +423,46 @@ function onDraw()
     SC(UC)
     -- draw current heading
     local h = SF("%.0f", HANG)
-    DT((SCR_W - #h * 5) / 2 + 1, 0, h)
-    DR(SCR_W / 2 - 9, -2, 17, 8)
+    DT((SCR_W - #h * 5) / 2 + 1, 2, h)
+    DR(SCR_W / 2 - 9, 0, 17, 8)
     -- draw scaleplate
     -- left
     for i = (HANG // 1) % HI, 180, HI do
-        local x = (-i - HANG % 1) * HG / HI + SCR_W / 2
-        if x < HM then
+        local x = (-i - HANG % 1) * HG / HI
+        if x < -HM then
             break
         end
+        x = x + SCR_W / 2
         local ch = (HANG - i + 360) % 360
         if (ch // 1) % (2 * HI) == 0 then
-            DL(x, 7, x, 9)
+            DL(x, 9, x, 11)
             if SCR_W / 2 - x > 12 then
                 local chs = SF("%d", ch // 10)
-                DT(x - #chs * 2.5 + 1, 0, chs)
+                DT(x - #chs * 2.5 + 1, 2, chs)
             end
         else
-            DL(x, 8, x, 9)
+            DL(x, 10, x, 11)
         end
     end
     -- right
     for i = HI - (HANG // 1) % HI, 180, HI do
-        local x = (i - HANG % 1) * HG / HI + SCR_W / 2
-        if x > SCR_W - HM then
+        local x = (i - HANG % 1) * HG / HI
+        if x > HM then
             break
         end
+        x = x + SCR_W / 2
         local ch = (HANG + i) % 360
         if (ch // 1) % (2 * HI) == 0 then
-            DL(x, 7, x, 9)
+            DL(x, 9, x, 11)
             if x - SCR_W / 2 > 12 then
                 local chs = SF("%d", ch // 10)
-                DT(x - #chs * 2.5 + 1, 0, chs)
+                DT(x - #chs * 2.5 + 1, 2, chs)
             end
         else
-            DL(x, 8, x, 9)
+            DL(x, 10, x, 11)
         end
     end
 
     -- draw zoom ratio
-    DT(6, SCR_W - 6, SF("X%.1f", BASE_FOV / FOV))
+    DT(6, SCR_H - 6, SF("X%.1f", BASE_FOV / FOV))
 end
