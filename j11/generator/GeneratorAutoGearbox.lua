@@ -18,7 +18,6 @@ GEN_RPS_MIN = PN("Generator Min RPS")
 GB_COUNT = PN("Gearbox Count")
 
 GB_DATA = {}
-GBS = {} -- gearboxSwitches, for temp calculation
 FRM = {} -- final ratio mapping, for distinct
 RATIO_DATA = {}
 
@@ -28,15 +27,20 @@ for i = 1, GB_COUNT do
         offRatio = PN(string.format("GBR_%d_OFF", i)),
         onRatio = PN(string.format("GBR_%d_ON", i))
     })
-    TI(GBS, false)
 end
 
--- calculate possible ratio combination
-function calRatio(curIndex)
-    local function calFinalRatio()
+function calRatioData()
+    local function calFinalRatio(switcheNum)
+        -- convert switchNum to bool array
+        local switches = {}
+        for _ = 1, GB_COUNT do
+            TI(switches, switcheNum & 1 == 1)
+            switcheNum = switcheNum >> 1
+        end
+
         local finalRatio = 1
         for i, gearbox in IPR(GB_DATA) do
-            if GBS[i] then
+            if switches[i] then
                 -- on
                 finalRatio = finalRatio * gearbox.onRatio
             else
@@ -49,25 +53,16 @@ function calRatio(curIndex)
             FRM[finalRatio] = true
             TI(RATIO_DATA, {
                 ratio = finalRatio,
-                switches = T.move(GBS, 1, GB_COUNT, 1, {})
+                switches = switches
             })
         end
     end
-
-    if curIndex == GB_COUNT then
-        calFinalRatio()
-        GBS[curIndex] = true
-        calFinalRatio()
-        GBS[curIndex] = false
-    else
-        calRatio(curIndex + 1)
-        GBS[curIndex] = true
-        calRatio(curIndex + 1)
-        GBS[curIndex] = false
+    for i = 0, 2 ^ GB_COUNT - 1 do
+        calFinalRatio(i)
     end
 end
 
-calRatio(1)
+calRatioData()
 
 -- sort ratio data (in acending order of finalRatio)
 function compByRatio(ratioDataA, ratioDataB)
